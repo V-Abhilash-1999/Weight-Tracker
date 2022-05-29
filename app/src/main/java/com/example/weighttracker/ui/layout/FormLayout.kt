@@ -34,10 +34,13 @@ internal fun FormLayout(
             ) {
                 var headerText: String? = null
                 var textStyle: TextStyle = TextStyle.Default
-                var headerAlignment: Alignment.Horizontal = Alignment.CenterHorizontally
+
                 var rowModifier: Modifier = Modifier
                 var headerModifier: Modifier = Modifier
-                modifier.any { mod ->
+                /**
+                 * Running through all modifiers nested in main modifier
+                 */
+                modifier.all { mod ->
                     headerText?.let {
                         headerModifier = headerModifier.then(mod)
                     } ?: run {

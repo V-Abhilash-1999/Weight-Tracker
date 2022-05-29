@@ -145,15 +145,6 @@ fun WTDashboardContentExtension(viewModel: WTViewModel) {
     val lifeCycleOwner = LocalLifecycleOwner.current
     val lineColor = MaterialTheme.colors.onSecondary
 
-//    LaunchedEffect(key1 = Unit) {
-//        viewModel.insertData(day = 8, month = 3, weight = 82f)
-//        viewModel.insertData(day = 9, month = 3, weight = 83f)
-//        viewModel.insertData(day = 10, month = 3, weight = 83f, skipped = true)
-//        viewModel.insertData(day = 11, month = 3, weight = 82.3f)
-//        viewModel.insertData(day = 12, month = 3, weight = 82.3f, skipped = true)
-//        viewModel.insertData(day = 13, month = 3, weight = 82.3f, skipped = true)
-//    }
-
     val data = produceState(initialValue = listOf()) {
         viewModel.getData().observe(lifeCycleOwner) { dataList ->
             value = listOf(

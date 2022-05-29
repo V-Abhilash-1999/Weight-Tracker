@@ -5,13 +5,17 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.toLowerCase
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
 import com.abhilash.weighttracker.chart.chart.data.ZDDataValue
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.util.*
 
 const val UNSPECIFIED = "UNSPECIFIED"
+const val ERROR_STATE = -1
+const val YEAR = 2022
 
 fun Color.getGradients() : List<Color> = (1..5).map { copy(alpha = it/100f) }
 
@@ -40,4 +44,44 @@ fun Context.makeToast(
     length: Int = Toast.LENGTH_SHORT
 ) {
     Toast.makeText(this, message, length).show()
+}
+
+fun String.getDay(): Int {
+    return try {
+        val day = this.split("-")[1].trim().toInt()
+
+        if(day in 1..31) day else ERROR_STATE
+
+    } catch (ex: Exception) {
+        ERROR_STATE
+    }
+}
+
+fun String.getMonth(): Int {
+    return try {
+        val day = this.split("-")[0].trim().lowercase().toMonth()
+
+        if(day in 1..31) day else ERROR_STATE
+
+    } catch (ex: Exception) {
+        ERROR_STATE
+    }
+}
+
+private fun String.toMonth(): Int {
+    return when(this) {
+        "jan" -> 1
+        "feb" -> 2
+        "mar" -> 3
+        "apr" -> 4
+        "may" -> 5
+        "jun" -> 6
+        "jul" -> 7
+        "aug" -> 8
+        "sep" -> 9
+        "oct" -> 10
+        "nov" -> 11
+        "dec" -> 12
+        else -> ERROR_STATE
+    }
 }
