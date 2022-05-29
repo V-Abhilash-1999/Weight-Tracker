@@ -70,7 +70,8 @@ sealed class ZDBandwidthData : Serializable
  * @param linePathType will indicate how the path effect should be applied when drawing
  */
 data class ZDLineChartData(
-    val color: Color,
+    val upColor: Color,
+    val downColor: Color,
     val dataValues: List<ZDDataValue>,
     val dataPointStyle: ZDDataPointStyle = None,
     val lineWidth: Dp = Dp.Hairline,

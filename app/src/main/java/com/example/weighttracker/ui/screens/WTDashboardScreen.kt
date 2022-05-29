@@ -11,20 +11,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abhilash.weighttracker.chart.chart.data.*
 import com.example.weighttracker.ui.theme.*
 import com.example.weighttracker.ui.util.toLineDataValues
 import com.example.weighttracker.viewmodel.WTViewModel
-import com.abhilash.weighttracker.chart.chart.data.ZDBackgroundStyle
-import com.abhilash.weighttracker.chart.chart.data.ZDLineChartData
 import com.abhilash.weighttracker.chart.chart.ui.ZDLineChart
 import com.example.weighttracker.ui.screens.destinations.WTWeightInserterDestination
+import com.example.weighttracker.ui.util.DatapointSize
 import com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
@@ -143,16 +142,19 @@ fun BottomBar(
 @Composable
 fun WTDashboardContentExtension(viewModel: WTViewModel) {
     val lifeCycleOwner = LocalLifecycleOwner.current
-    val lineColor = MaterialTheme.colors.onSecondary
 
     val data = produceState(initialValue = listOf()) {
         viewModel.getData().observe(lifeCycleOwner) { dataList ->
-            value = listOf(
-                ZDLineChartData(
-                    color = lineColor,
-                    dataValues = dataList.toLineDataValues()
+            val dataValues = dataList.toLineDataValues()
+            if(dataValues.all { it.value != 0f }) {
+                value = listOf(
+                    ZDLineChartData(
+                        upColor = Color.Red,
+                        downColor = Color.Green,
+                        dataValues = dataList.toLineDataValues()
+                    )
                 )
-            )
+            }
         }
     }
     
@@ -168,10 +170,18 @@ fun LineChart(lineData: List<ZDLineChartData>) {
             .fillMaxWidth()
             .padding(16.dp),
         chartData = lineData,
+        lineChartStyle = ZDLineChartStyle(
+            dataPointStyle = Outline(
+                size = DatapointSize
+            ),
+            lineWidth = 4.dp,
+            lineStyle = ZDLineStyle.CURVED
+        ),
         backgroundStyle = ZDBackgroundStyle(
             drawBgLines = true,
             backgroundColor = MaterialTheme.colors.background
         ),
+        animationTimeMillis = 300,
         dataSpacing = 75.dp
     )
 }

@@ -26,7 +26,8 @@ val MutableState<Holder<ZDLineChartData>>.lineChartData
     get() = this.value.bandwidthDataList
         .filterNot {
             it == ZDLineChartData(
-                color = Color.Transparent,
+                upColor = Color.Transparent,
+                downColor = Color.Transparent,
                 dataValues = listOf()
             )
         }

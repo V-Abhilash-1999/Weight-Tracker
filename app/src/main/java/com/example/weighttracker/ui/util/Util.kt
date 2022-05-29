@@ -3,6 +3,7 @@ package com.example.weighttracker.ui.util
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.toLowerCase
@@ -16,6 +17,7 @@ import java.util.*
 const val UNSPECIFIED = "UNSPECIFIED"
 const val ERROR_STATE = -1
 const val YEAR = 2022
+val DatapointSize = Size(15f, 15f)
 
 fun Color.getGradients() : List<Color> = (1..5).map { copy(alpha = it/100f) }
 

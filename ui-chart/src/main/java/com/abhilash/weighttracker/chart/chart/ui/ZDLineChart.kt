@@ -161,7 +161,8 @@ private fun LineChartSegment(
 
     val emptyBandwidthData = remember {
         ZDLineChartData(
-            color = Color.Transparent,
+            upColor = Color.Transparent,
+            downColor = Color.Transparent,
             dataValues = listOf(),
             lineWidth = Dp.Hairline
         )
@@ -273,7 +274,8 @@ internal fun DrawScope.drawLineChart(
     startOffset: Float = 0f
 ) {
     val dataList = lineChartData.dataValues
-    val lineColor = lineChartData.color
+    val upColor = lineChartData.upColor
+    val downColor = lineChartData.downColor
     val dataLineStyle = lineChartData.lineStyle ?: lineStyle
     val lineWidthPx = if(lineChartData.lineWidth == Dp.Hairline) {
         lineWidth.toPx()
@@ -301,13 +303,32 @@ internal fun DrawScope.drawLineChart(
 
     val conPoints = ArrayList<ZDBezierPoints>()
     dataList.forEachIndexed { i, dataValue ->
-        val currData = dataValue.getValue(verticalShiftProperty)
-        val currentDatapoint = Offset(
-            x = (i * spacing) + startOffset,
-            y = canvasHeight - currData * heightSpacing
+        val drawPath = Path()
+        val currentDatapoint = dataValue.getDatapointOffset(
+            index = i,
+            spacing = spacing,
+            startOffset = startOffset,
+            canvasHeight = canvasHeight,
+            heightSpacing = heightSpacing,
+            verticalShiftProperty = verticalShiftProperty
         )
+
         if(i != 0) {
+            val lastDatapoint =  dataList[i-1].getDatapointOffset(
+                index = i-1,
+                spacing = spacing,
+                startOffset = startOffset,
+                canvasHeight = canvasHeight,
+                heightSpacing = heightSpacing,
+                verticalShiftProperty = verticalShiftProperty
+            )
+            drawPath.moveTo(lastDatapoint.x, lastDatapoint.y)
             drawLine(
+                drawPath = drawPath,
+                lineColor = if(dataValue.value > dataList[i-1].value) upColor else downColor,
+                linePathType = lineChartData.linePathType,
+                lineWidthPx = lineWidthPx,
+                animatedValue = animatedValue,
                 conPoints = conPoints,
                 previousIndex = i - 1,
                 path = path,
@@ -317,17 +338,110 @@ internal fun DrawScope.drawLineChart(
             )
         } else {
             path.moveTo(currentDatapoint.x, currentDatapoint.y)
+            drawPath.moveTo(currentDatapoint.x, currentDatapoint.y)
         }
         point = currentDatapoint
     }
 
+    gradient?.let { gradientStyle ->
+        val maxVal = dataList.maxOf { it.value }
+        val maxY = canvasHeight - (maxVal * heightSpacing)
+        drawGradient(
+            path = path,
+            canvasHeight = canvasHeight,
+            alphaVal = alphaVal,
+            gradient = gradientStyle,
+            lineColor = Color.Black,
+            lastPoint = point,
+            maxY = maxY
+        )
+    }
+
+    if(dataPointStyle != None) {
+        drawDataPoint(
+            animatedValue = animatedValue,
+            dataList =  dataList,
+            dataPointStyle = dataPointStyle ?: lineChartData.dataPointStyle,
+            spacing = spacing,
+            canvasHeight = canvasHeight,
+            heightSpacing = heightSpacing,
+            backgroundColor = backgroundColor,
+            upColor = upColor,
+            downColor = downColor,
+            verticalShiftProperty = verticalShiftProperty,
+            startOffset = startOffset
+        )
+    }
+    path.close()
+}
+
+private fun DrawScope.drawLine(
+    drawPath: Path,
+    lineColor: Color,
+    linePathType: ZDLinePathType,
+    lineWidthPx: Float,
+    animatedValue: Float,
+    lineStyle: ZDLineStyle,
+    previousIndex: Int,
+    path: Path,
+    conPoints: ArrayList<ZDBezierPoints>,
+    point: Offset,
+    currentDatapoint: Offset
+) {
+    if(lineStyle == ZDLineStyle.CURVED) {
+        conPoints.add(
+            ZDBezierPoints(
+                point.x,
+                point.y,
+                currentDatapoint.x,
+                currentDatapoint.y
+            )
+        )
+        path.cubicTo(
+            conPoints[previousIndex].x1,
+            conPoints[previousIndex].y1,
+            conPoints[previousIndex].x2,
+            conPoints[previousIndex].y2,
+            currentDatapoint.x,
+            currentDatapoint.y
+        )
+
+        drawPath.cubicTo(
+            conPoints[previousIndex].x1,
+            conPoints[previousIndex].y1,
+            conPoints[previousIndex].x2,
+            conPoints[previousIndex].y2,
+            currentDatapoint.x,
+            currentDatapoint.y
+        )
+    }
+    else {
+        path.lineTo(currentDatapoint.x,currentDatapoint.y)
+        drawPath.lineTo(currentDatapoint.x,currentDatapoint.y)
+    }
+    drawCurrentLine(
+        path = drawPath,
+        lineColor = lineColor,
+        linePathType = linePathType,
+        lineWidthPx = lineWidthPx,
+        animatedValue = animatedValue
+    )
+}
+
+private fun DrawScope.drawCurrentLine(
+    path: Path,
+    lineColor: Color,
+    linePathType: ZDLinePathType,
+    lineWidthPx: Float,
+    animatedValue: Float
+) {
     val pathMeasure = PathMeasure().apply {
-            setPath(path, false)
-        }
+        setPath(path, false)
+    }
     val pathLength = pathMeasure.length
 
     var strokeCap = StrokeCap.Butt
-    val outerPathEffect = when(lineChartData.linePathType) {
+    val outerPathEffect = when(linePathType) {
         ZDLinePathType.DOT -> {
             strokeCap = StrokeCap.Round
             PathEffect.dashPathEffect(
@@ -362,7 +476,7 @@ internal fun DrawScope.drawLineChart(
             phase = (1 - animatedValue) * pathLength
         ),
 
-    )
+        )
 
     val stroke = Stroke(
         width = lineWidthPx,
@@ -371,71 +485,10 @@ internal fun DrawScope.drawLineChart(
     )
 
     drawPath(
-        path,
-        lineColor,
+        path = path,
+        color = lineColor,
         style = stroke
     )
-
-    gradient?.let { gradientStyle ->
-        val maxVal = dataList.maxOf { it.value }
-        val maxY = canvasHeight - (maxVal * heightSpacing)
-        drawGradient(
-            path = path,
-            canvasHeight = canvasHeight,
-            alphaVal = alphaVal,
-            gradient = gradientStyle,
-            lineColor = lineColor,
-            lastPoint = point,
-            maxY = maxY
-        )
-    }
-
-    if(dataPointStyle != None) {
-        drawDataPoint(
-            animatedValue = animatedValue,
-            dataList =  dataList,
-            dataPointStyle = dataPointStyle ?: lineChartData.dataPointStyle,
-            spacing = spacing,
-            canvasHeight = canvasHeight,
-            heightSpacing = heightSpacing,
-            backgroundColor = backgroundColor,
-            lineColor = lineColor,
-            verticalShiftProperty = verticalShiftProperty,
-            startOffset = startOffset
-        )
-    }
-    path.close()
-}
-
-private fun drawLine(
-    lineStyle: ZDLineStyle,
-    previousIndex: Int,
-    path:Path,
-    conPoints: ArrayList<ZDBezierPoints>,
-    point: Offset,
-    currentDatapoint: Offset
-) {
-    if(lineStyle == ZDLineStyle.CURVED) {
-        conPoints.add(
-            ZDBezierPoints(
-                point.x,
-                point.y,
-                currentDatapoint.x,
-                currentDatapoint.y
-            )
-        )
-        path.cubicTo(
-            conPoints[previousIndex].x1,
-            conPoints[previousIndex].y1,
-            conPoints[previousIndex].x2,
-            conPoints[previousIndex].y2,
-            currentDatapoint.x,
-            currentDatapoint.y
-        )
-    }
-    else {
-        path.lineTo(currentDatapoint.x,currentDatapoint.y)
-    }
 }
 
 /**
@@ -497,7 +550,8 @@ private fun DrawScope.drawDataPoint(
     canvasHeight: Float,
     heightSpacing: Float,
     backgroundColor: Color,
-    lineColor: Color,
+    upColor: Color,
+    downColor: Color,
     verticalShiftProperty: ZDVerticalShiftProperty,
     startOffset: Float
 ) {
@@ -508,7 +562,7 @@ private fun DrawScope.drawDataPoint(
     val pointSize:Size
     val strokeWidth: Float
 
-    var dataColor = lineColor
+    var dataColor = downColor
     val drawStyle = when (dataPointStyle) {
         None -> {
             spacingCircle = Size(0f,0f)
@@ -574,12 +628,21 @@ private fun DrawScope.drawDataPoint(
              * Drawing outer circle with stroke
              * If dataPoint style is filled, the outer circle is drawn in fill style
              */
-            drawOval(
-                color = dataColor,
-                topLeft = pointCenter,
-                size = pointSize,
-                style = drawStyle
-            )
+            if(index != 0) {
+                drawOval(
+                    color = if(dataValue.value > dataList[index-1].value) upColor else downColor,
+                    topLeft = pointCenter,
+                    size = pointSize,
+                    style = drawStyle
+                )
+            } else {
+                drawOval(
+                    color = downColor,
+                    topLeft = pointCenter,
+                    size = pointSize,
+                    style = drawStyle
+                )
+            }
         }
     }
 }

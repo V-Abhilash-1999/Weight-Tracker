@@ -61,19 +61,6 @@ internal fun getLineAnimatedMap(
 }
 
 @Composable
-internal fun getBarAnimatedMap(
-    labelList: List<String>,
-    initialValue: Float,
-) = labelList.associateWith {
-    remember {
-        Animatable(
-            initialValue = initialValue,
-            visibilityThreshold = Spring.DampingRatioNoBouncy
-        )
-    }
-}
-
-@Composable
 internal fun YLabelsList(
     list: List<String>,
     yAxisWidth: Dp,
@@ -130,7 +117,6 @@ internal fun XLabelsList(
         )
     }
 }
-
 
 internal fun DrawScope.drawStar(
     posX: Float,

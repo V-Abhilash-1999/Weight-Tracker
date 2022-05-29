@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abhilash.weighttracker.chart.chart.data.*
-import com.abhilash.weighttracker.chart.chart.ui.circular.ZDPieChartOnClickListener
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.atan2
@@ -17,7 +16,6 @@ import kotlin.math.sqrt
 
 internal const val DEG_TO_RAD_CONST = 57.2958f
 internal val STAR_SIZE = 16.dp
-internal val BAR_TOP_SPACING = 8.dp
 
 internal fun List<ZDBandwidthData>.getMaxLabelList() : List<String> {
     val data = this
@@ -55,20 +53,6 @@ internal fun List<ZDBandwidthData>.getMaxLabelList() : List<String> {
     } else {
         listOf()
     }
-}
-
-internal fun ZDVerticalShiftProperty.getYAxisLabels(): List<String> {
-    val list = mutableListOf<String>()
-    for (i in 0 until numberOfShifts + 1) {
-        val yAxisLabelValue = maxShiftValue - (maxShiftValue / numberOfShifts) * i
-        val text = if (yAxisLabelValue % 1 == 0f || yAxisLabelValue == 0f) {
-            yAxisLabelValue.toInt().toString()
-        } else {
-            "%.1f".format(yAxisLabelValue)
-        }
-        list.add(text)
-    }
-    return list
 }
 
 internal fun ZDVerticalShiftProperty.getYAxisLineLabels(): List<String> {
@@ -143,24 +127,6 @@ internal fun List<ZDLineChartData>.getMinVal():Float {
     }
 }
 
-internal fun <T> Map<T, MutableState<Float>>.toggleProgress() {
-    this.values.forEach{
-        if (it.value == ZDProgress.PROGRESS.PROGRESS_AT_START) {
-            it.value = ZDProgress.PROGRESS.PROGRESS_COMPLETE
-        } else {
-            it.value = ZDProgress.PROGRESS.PROGRESS_AT_START
-        }
-    }
-}
-
-internal fun <T> Map<T, MutableState<Float>>.setProgress(progress: Float) {
-    this.values.forEach{
-        if(it.value != progress) {
-            it.value = progress
-        }
-    }
-}
-
 internal fun List<ZDBandwidthData>.getWidth(spacing: Dp, removeBarWidth: Dp = Dp.Hairline): Dp {
     return if(this.isEmpty()){
         Dp.Hairline
@@ -205,112 +171,6 @@ internal val MutableState<Offset>.x
 
 internal val MutableState<Offset>.y
     get() = value.y
-
-@Composable
-internal fun ObserveOnPress(
-    source : MutableInteractionSource,
-    offsetState : MutableState<Offset>
-) {
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(key1 = 0) {
-        scope.launch {
-            source.interactions.collectLatest { interaction ->
-                if (interaction is PressInteraction.Release) {
-                    val pressedOffset = interaction.press.pressPosition
-                    if (pressedOffset != offsetState.value) {
-                        offsetState.value = pressedOffset
-                    }
-                }
-            }
-        }
-    }
-}
-
-internal fun checkAndUpdateClickedState(
-    offset: MutableState<Offset>,
-    pressedState: MutableState<Int>,
-    radius: Float,
-    startAngles: List<Float>,
-    sweepAngles: Array<Float>,
-    center: Offset,
-    lineWidth: Float,
-    itemClickListener: ZDPieChartOnClickListener?
-) {
-    val x = center.x
-    val y = center.y
-    val clickedRadius = sqrt(
-        (x - offset.x) * (center.x - offset.x) +
-                (y - offset.y) * (center.y - offset.y)
-    )
-    if (clickedRadius > (radius - lineWidth/2) && clickedRadius < (radius + lineWidth/2)) {
-        val clickedAngle = (atan2(offset.x - center.x, center.y - offset.y) * DEG_TO_RAD_CONST - 90f).toPositiveDegrees()
-
-        for (index in sweepAngles.indices) {
-            val currentSweepAngle = sweepAngles[index]
-            val currentStartAngle =
-                (startAngles[index].toPositiveDegrees()) % 360f
-            val currentEndAngle =
-                (startAngles[index].toPositiveDegrees() + currentSweepAngle).toPositiveDegrees() % 360f
-
-            val clickedOnCurrentIndex =
-                when {
-                    currentStartAngle < currentEndAngle -> {
-                        if(currentSweepAngle > 0f) {
-                            (clickedAngle > currentStartAngle) && (clickedAngle < currentEndAngle)
-                        } else {
-                            (clickedAngle > currentEndAngle) || (clickedAngle < currentStartAngle)
-                        }
-                    }
-
-                    currentStartAngle > currentEndAngle -> {
-                        if(currentSweepAngle < 0f) {
-                            (clickedAngle < currentStartAngle) && (clickedAngle > currentEndAngle)
-                        } else {
-                            (clickedAngle > 0f && clickedAngle < currentEndAngle) ||
-                                    (clickedAngle > currentStartAngle && clickedAngle < 360f)
-                        }
-                    }
-
-                    else -> {
-                        false
-                    }
-                }
-
-            if (clickedOnCurrentIndex) {
-                if (pressedState.value != index) {
-                    pressedState.value = index
-                    itemClickListener?.onItemClicked(index)
-                } else {
-                    pressedState.value = -1
-                    itemClickListener?.onItemClicked(-1)
-                }
-                break
-            }
-
-            if(index == sweepAngles.lastIndex && !clickedOnCurrentIndex) {
-                pressedState.value = -1
-                itemClickListener?.onItemClicked(-1)
-            }
-        }
-    }
-    else {
-        if(pressedState.value != -1) {
-            itemClickListener?.onItemClicked(-1)
-        }
-        pressedState.value = -1
-    }
-    offset.value = Offset.Zero
-}
-
-internal fun Modifier.observeClickable(
-    source: MutableInteractionSource,
-    clickable: Boolean
-) = this.clickable(
-    enabled = clickable,
-    interactionSource = source,
-    indication = null,
-    onClick = {}
-)
 
 internal fun lineChartAnimationCallBack(
     animationMap: MutableMap<ZDLineChartData, Boolean?>,
@@ -402,24 +262,17 @@ internal fun ZDDataValue.getValue(verticalShiftProperty: ZDVerticalShiftProperty
     return ((value - verticalShiftProperty.minShiftValue) / minMaxRange) * verticalShiftProperty.maxShiftValue
 }
 
-
-fun isEqual(first: List<ZDBarData>, second: List<ZDBarData>): Boolean {
-    if (first.size != second.size) {
-        return false
-    }
-    return first.zip(second).all { (x, y) ->
-        return if(x.dataValues.size != y.dataValues.size) {
-            false
-        } else {
-            x.dataValues.zip(y.dataValues).all { (x1, y1) ->
-                if(x1.size != y1.size) {
-                    false
-                } else {
-                    x1.zip(y1).all { (x2, y2) ->
-                        x2.value == y2.value
-                    }
-                }
-            }
-        }
-    }
+internal fun ZDDataValue.getDatapointOffset(
+    index: Int,
+    spacing: Float,
+    startOffset: Float,
+    canvasHeight: Float,
+    heightSpacing: Float,
+    verticalShiftProperty: ZDVerticalShiftProperty)
+: Offset {
+    val currData = getValue(verticalShiftProperty)
+    return Offset(
+        x = (index * spacing) + startOffset,
+        y = canvasHeight - currData * heightSpacing
+    )
 }
