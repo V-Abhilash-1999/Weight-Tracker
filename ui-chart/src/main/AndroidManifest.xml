@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.zoho.desk.platform.sdk">
+    <application>
+        <activity
+            android:name="com.abhilash.weighttracker.chart.ZChartActivity"
+            android:label="@string/app_name"
+            android:exported="true"
+            android:theme="@style/Theme.DeskPlatformSdk.NoActionBar">
+        </activity>
+    </application>
+
+</manifest>
