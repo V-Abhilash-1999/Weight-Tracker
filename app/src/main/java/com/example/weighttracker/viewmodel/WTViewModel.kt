@@ -1,11 +1,17 @@
 package com.example.weighttracker.viewmodel
 
+import android.content.SharedPreferences
+import android.util.Log
 import androidx.annotation.IntRange
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import com.example.weighttracker.repository.WTRoomRepository
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
+import com.example.weighttracker.ui.util.WTConstant
+import com.example.weighttracker.ui.util.WTSignInOption
+import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -15,8 +21,14 @@ import javax.inject.Inject
 
 class WTViewModel @Inject constructor(
     private val repository: WTRoomRepository,
-    private val firebaseDB: FirebaseDatabase
+    private val firebaseDB: FirebaseDatabase,
+    private val sharedPref: SharedPreferences
 ): ViewModel() {
+    private var signInMode: WTSignInOption? = null
+    var phoneNumber: String = ""
+    var isSignedIn = mutableStateOf(false)
+
+    var smsCode = mutableStateOf("")
 
     /***
      * day indicates the day of the month
@@ -54,4 +66,16 @@ class WTViewModel @Inject constructor(
     }
 
     fun getData(): LiveData<List<WTDataValue>> = repository.getWeight()
+
+    fun checkSignIn() {
+        val signInMode = sharedPref.getString(WTConstant.SIGN_IN, "") ?: ""
+        if(signInMode != "") {
+            this.signInMode = WTSignInOption.valueOf(signInMode)
+        }
+        isSignedIn.value = signInMode != ""
+    }
+
+    fun onSignInResult(res: FirebaseAuthUIAuthenticationResult) {
+        Log.e(">>>","$res")
+    }
 }

@@ -1,11 +1,15 @@
 package com.abhilash.weighttracker.chart.chart.ui.layout
 
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -13,12 +17,18 @@ import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.abhilash.weighttracker.chart.chart.data.ZDBackgroundStyle
+import com.abhilash.weighttracker.chart.chart.data.ZDChartScrollState
 import com.abhilash.weighttracker.chart.chart.data.ZDVerticalShiftProperty
 import com.abhilash.weighttracker.chart.chart.data.ZDXLabelOrientation
 import kotlin.math.cos
 import kotlin.math.roundToInt
+
+internal typealias MutableFloatState = MutableState<Float>
 
 @Composable
 internal fun ZDChartScreenLayout(
@@ -26,19 +36,28 @@ internal fun ZDChartScreenLayout(
     xLabelOrientation: ZDXLabelOrientation,
     backgroundStyle: ZDBackgroundStyle,
     verticalShiftProperty: ZDVerticalShiftProperty,
-    scrollState: ScrollState = rememberScrollState(),
-    chartWidth : Dp,
-    barWidth:Dp = 0.dp,
-    dataSpacing:Dp = 0.dp,
+    scrollState: ZDChartScrollState,
+    chartWidth: Float = 0f,
+    barWidth: Dp = 0.dp,
+    dataSpacing: Dp = 0.dp,
     chartTopPadding: Dp = 0.dp,
-    chartBottomPadding: Dp  = 0.dp,
+    chartBottomPadding: Dp = 0.dp,
     xAxisLabels: @Composable () -> Unit,
     yAxisLabels : @Composable () -> Unit,
-    chart : @Composable () -> Unit,
+    chart : @Composable (MutableFloatState) -> Unit,
 ) {
+    val scrollOffset = rememberSaveable { mutableStateOf(0f) }
+    val scrollStateAnimatable = remember { scrollState.animatable }
+
+    val scrollTo by rememberSaveable { scrollState.scrollToPercent }
     SubcomposeLayout(
         modifier = modifier
             .background(backgroundStyle.backgroundColor)
+            .enableSwipe(
+                scrollStateAnimatable = scrollStateAnimatable,
+                chartWidth = chartWidth,
+                pointerOffset = scrollOffset
+            )
     ) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
@@ -60,6 +79,7 @@ internal fun ZDChartScreenLayout(
         } else {
             0
         }
+
         layout(layoutWidth, layoutHeight) {
             val yAxisConstraints = looseConstraints.copy(
                 maxHeight = layoutHeight - chartTopPadding.roundToPx() - chartBottomPadding.roundToPx()
@@ -69,13 +89,13 @@ internal fun ZDChartScreenLayout(
 
             val chartConstraints = looseConstraints.copy()
 
-            val xLastPlaceableWidth = xAxisPlaceable.getZeroOnEmpty { last().width }
-            val xFirstPlaceableWidth = xAxisPlaceable.getZeroOnEmpty { first().width }
-
-            val xAxisLabelWidth = (xFirstPlaceableWidth/2).toDp() + (xLastPlaceableWidth/2).toDp()
+            val adjustedChartWidth = (layoutWidth - yAxisWidth).toDp()
 
             val chartWithXAxis = @Composable {
                 ZDXAxisChartLayout(
+                    modifier = Modifier
+                        .width(adjustedChartWidth)
+                        .padding(top = chartTopPadding),
                     xLabelOrientation = xLabelOrientation,
                     bottomSpacing = bottomSpacing,
                     bottomPadding = bottomPadding,
@@ -84,12 +104,12 @@ internal fun ZDChartScreenLayout(
                     yLabelHeight = yAxisPlaceable.getZeroOnEmpty { last().height },
                     xAxisLabels = xAxisLabels,
                     chart = chart,
-                    chartWidth = chartWidth,
-                    minWidth = (layoutWidth - yAxisWidth).toDp(),
-                    topPadding = chartTopPadding,
-                    totalWidth = chartWidth + yAxisWidth.toDp() + xAxisLabelWidth,
-                    scrollState = scrollState
+                    offset = scrollOffset
                 )
+            }
+
+            val xAxisChartPlaceable = subcompose(ChartLayout.CHART_WITH_LABELS, chartWithXAxis).map {
+                it.measure(chartConstraints)
             }
 
             if(backgroundStyle.drawBgLines) {
@@ -133,9 +153,9 @@ internal fun ZDChartScreenLayout(
                     }
                 }
 
-                val bgConstraints = looseConstraints.copy(
-                    maxHeight = looseConstraints.maxHeight - bottomSpacing - yLabelHeight
-                )
+                val bgMaxHeight = looseConstraints.maxHeight - bottomSpacing - yLabelHeight
+
+                val bgConstraints = looseConstraints.copy(maxHeight = bgMaxHeight)
                 val bgPlaceable = bgMeasurable.map { it.measure(bgConstraints) }
 
                 bgPlaceable.forEach {
@@ -148,10 +168,6 @@ internal fun ZDChartScreenLayout(
                         }
                     )
                 }
-            }
-
-            val xAxisChartPlaceable = subcompose(ChartLayout.CHART_WITH_LABELS, chartWithXAxis).map {
-                it.measure(chartConstraints)
             }
 
             xAxisChartPlaceable.forEach {
@@ -179,42 +195,48 @@ internal fun ZDChartScreenLayout(
     }
 }
 
+//@Composable
+//fun ScrollToSetter(
+//    scrollPercent: Int,
+//    scrollStateAnimatable: Animatable<Float, AnimationVector1D>,
+//    chartWidth: Float
+//) {
+//    LaunchedEffect(key1 = scrollPercent) {
+//        val scrollToValue = -(scrollPercent * chartWidth)/100
+//        scrollStateAnimatable
+//            .animateTo(
+//                scrollToValue,
+//                AnimationSpec
+//            )
+//    }
+//}
+
 @Composable
-internal fun ZDXAxisChartLayout(
+private fun ZDXAxisChartLayout(
+    modifier: Modifier,
     xLabelOrientation: ZDXLabelOrientation,
     bottomSpacing: Int,
+    dataSpacing: Dp,
     bottomPadding: Int,
     barWidth: Dp = 0.dp,
-    dataSpacing: Dp = 0.dp,
     yLabelHeight: Int,
-    chartWidth: Dp,
+    offset: MutableFloatState,
     xAxisLabels: @Composable () -> Unit,
-    chart: @Composable () -> Unit,
-    topPadding: Dp,
-    minWidth: Dp,
-    totalWidth: Dp,
-    scrollState: ScrollState
+    chart: @Composable (MutableFloatState) -> Unit
 ) {
-    val scrollPos = remember { mutableStateOf(scrollState.value) }
-    LaunchedEffect(key1 = chartWidth) {
-        if(scrollState.value != scrollPos.value)
-            scrollPos.value = scrollState.value
-    }
     SubcomposeLayout(
-        modifier = Modifier
-            .horizontalScroll(scrollState)
-            .defaultMinSize(minWidth = minWidth)
-            .width(totalWidth)
-            .padding(top = topPadding)
+        modifier = modifier
     ) { constraints ->
         val layoutWidth = constraints.maxWidth
         val layoutHeight = constraints.maxHeight
         val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
-        layout(layoutWidth, layoutHeight) {
-            val xAxisConstraints = looseConstraints.copy(maxWidth = layoutWidth)
-            val xAxisLabelPlaceable = subcompose(ChartLayout.X_AXIS, xAxisLabels).map { it.measure(xAxisConstraints) }
 
-            val firstLabelWidth = xAxisLabelPlaceable.getZeroOnEmpty { first().width }
+        layout(layoutWidth, layoutHeight) {
+            val xAxisConstraints = looseConstraints.copy(maxWidth = looseConstraints.maxWidth)
+
+            val xAxisPlaceable = subcompose(ChartLayout.X_AXIS_LENGTH, xAxisLabels).map { it.measure(xAxisConstraints) }
+
+            val firstLabelWidth = xAxisPlaceable.getZeroOnEmpty { first().width }
             val barWidthPx = barWidth.roundToPx()
 
             val chartMaxHeight = looseConstraints.maxHeight - bottomSpacing - yLabelHeight - bottomPadding
@@ -223,127 +245,39 @@ internal fun ZDXAxisChartLayout(
                     maxHeight = chartMaxHeight,
                     maxWidth = layoutWidth
                 )
-            val chartPlaceable = subcompose(ChartLayout.CHART, chart).map { it.measure(chartConstraints) }
+            val chartHolder = @Composable {
+                chart(offset)
+            }
+            val chartPlaceable = subcompose(ChartLayout.CHART, chartHolder).map { it.measure(chartConstraints) }
 
             val chartHeight = chartPlaceable.maxOf { it.height }
 
             chartPlaceable.forEach { it.place ((firstLabelWidth - barWidthPx)/2, yLabelHeight/2) }
 
-            val xMinWidth = xAxisLabelPlaceable.getZeroOnEmpty { minOf { it.width } }
+            val xMinWidth = xAxisPlaceable.getZeroOnEmpty { minOf { it.width } }
 
-            val yPos = chartHeight + yLabelHeight + bottomPadding
-            val ySlantedPos = if(xLabelOrientation != ZDXLabelOrientation.STRAIGHT) {
-                (xMinWidth * cos(xLabelOrientation.angle)).toInt() / 2
-            } else {
-                0
-            }
+            val ySlantedPos =
+                ((xMinWidth * cos(xLabelOrientation.angle)).toInt() / 2)
+                    .takeIf { xLabelOrientation != ZDXLabelOrientation.STRAIGHT } ?: 0
 
-            xAxisLabelPlaceable.forEachIndexed { index, placeable ->
-                val spacing = (barWidth.toPx() + dataSpacing.toPx()).roundToInt()
+            val yPos = chartHeight + yLabelHeight + bottomPadding + ySlantedPos
+
+            val spacing = (barWidth.toPx() + dataSpacing.toPx()).roundToInt()
+
+            xAxisPlaceable.forEachIndexed { index, placeable ->
                 val xPos = index * spacing
-                placeable.place(
-                    x = xPos,
-                    y = yPos + ySlantedPos
-                )
+                placeable.place(x = (xPos + offset.value).toInt(), y = yPos)
             }
         }
     }
 }
 
-private class ClipRect(val size:Size) :Shape {
+private class ClipRect(val size: Size) : Shape {
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density
     ): Outline {
         return Outline.Rectangle(this.size.toRect())
-    }
-}
-
-@Composable
-internal fun ZDFillChartLayout(
-    modifier: Modifier,
-    dataSpacing: Dp,
-    chartWidth: Dp,
-    topLabels: @Composable () -> Unit,
-    bottomLabels: @Composable () -> Unit,
-    chart: @Composable () -> Unit
-) {
-    SubcomposeLayout(modifier = modifier) { constraints ->
-        val layoutHeight = constraints.maxHeight
-        val layoutWidth = constraints.maxWidth
-        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
-        layout(width = layoutWidth, height = layoutHeight) {
-            val chartWithLabels = @Composable {
-                ChartWithLabels(
-                    chartWidth = chartWidth,
-                    dataSpacing = dataSpacing,
-                    topLabels = topLabels,
-                    bottomLabels = bottomLabels,
-                    chart = chart
-                )
-            }
-            val placeables = subcompose(ChartLayout.CHART_WITH_LABELS, chartWithLabels).map { it.measure(looseConstraints) }
-            placeables.forEach { placeable ->
-                placeable.place(x = 0, y = 0)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChartWithLabels(
-    chartWidth: Dp,
-    dataSpacing: Dp,
-    topLabels: @Composable () -> Unit,
-    bottomLabels: @Composable () -> Unit,
-    chart: @Composable () -> Unit
-) {
-    val scrollState = rememberScrollState()
-    SubcomposeLayout(
-        modifier = Modifier
-            .horizontalScroll(scrollState)
-            .fillMaxHeight()
-            .width(chartWidth)
-    ) { constraints ->
-        val layoutHeight = constraints.maxHeight
-        val layoutWidth = constraints.maxWidth
-        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
-
-        layout(width = layoutWidth, height = layoutHeight) {
-            val topLabelPlaceables = subcompose(ChartLayout.TOP_LABELS, topLabels).map { it.measure(looseConstraints) }
-            val bottomLabelPlaceables = subcompose(ChartLayout.BOTTOM_LABELS, bottomLabels).map { it.measure(looseConstraints) }
-
-            val topLabelHeight  = topLabelPlaceables.getZeroOnEmpty { maxOf { it.height } }
-            val bottomLabelHeight = bottomLabelPlaceables.getZeroOnEmpty { maxOf { it.height } }
-
-            val chartConstraints = looseConstraints.copy(
-                maxHeight = (looseConstraints.maxHeight - topLabelHeight - bottomLabelHeight),
-                maxWidth = looseConstraints.maxWidth
-            )
-
-            val chartPlaceable = subcompose(ChartLayout.CHART, chart).map { it.measure(chartConstraints) }
-
-            val spacing = dataSpacing.roundToPx()
-
-            val chartHeight = chartPlaceable.maxOf { it.height }
-
-            var x = spacing/2
-            topLabelPlaceables.forEach { placeable ->
-                placeable.place(x = (x - placeable.width / 2), y = 0)
-                x += spacing
-            }
-
-            x = 0
-            chartPlaceable.forEach { placeable ->
-                placeable.place(x = x, y = topLabelHeight)
-            }
-
-            x = spacing/2
-            bottomLabelPlaceables.forEach { placeable ->
-                placeable.place(x = x - placeable.width / 2, y = (topLabelHeight + chartHeight))
-                x += spacing
-            }
-        }
     }
 }

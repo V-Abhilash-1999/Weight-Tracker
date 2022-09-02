@@ -2,6 +2,10 @@ package com.abhilash.weighttracker.chart.chart.data
 
 import androidx.annotation.ColorInt
 import androidx.annotation.IntRange
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -70,8 +74,7 @@ sealed class ZDBandwidthData : Serializable
  * @param linePathType will indicate how the path effect should be applied when drawing
  */
 data class ZDLineChartData(
-    val upColor: Color,
-    val downColor: Color,
+    val color: Color,
     val dataValues: List<ZDDataValue>,
     val dataPointStyle: ZDDataPointStyle = None,
     val lineWidth: Dp = Dp.Hairline,
@@ -104,6 +107,7 @@ data class ZDBarDataValue(
  */
 data class ZDBarData(
     val xLabel: String,
+    val barTopLabel: String?,
     val dataValues: List<List<ZDBarDataValue>>
 ) : ZDBandwidthData()
 
@@ -114,13 +118,15 @@ data class ZDDataValue(
     val isAnomaly:Boolean = false
 ) : Serializable
 
+@Stable
 internal data class ZDVerticalShiftProperty(
     val mYMin: Float,
     val mYMax: Float,
+    val calculateMaxShiftValues: Boolean = true
 ) {
     private val shiftIntervals: Float = 10.0.pow(floor(log10(abs(mYMax).toDouble()))).toFloat()
     val minShiftValue = (shiftIntervals * floor((mYMin / shiftIntervals).toDouble())).toFloat()
-    val maxShiftValue = (shiftIntervals * ceil((mYMax / shiftIntervals).toDouble())).toFloat()
+    val maxShiftValue = if(calculateMaxShiftValues) (shiftIntervals * ceil((mYMax / shiftIntervals).toDouble())).toFloat() else mYMax
     val numberOfShifts: Int
     val mainArr : List<Float>
 
@@ -136,7 +142,7 @@ internal data class ZDVerticalShiftProperty(
             localList.add(0f)
             localList.add(0f)
         }
-        else{
+        else {
             for (i in 0..mYgridNum) {
                 localList.add(i/mYgridNum.toFloat())
             }
@@ -145,6 +151,7 @@ internal data class ZDVerticalShiftProperty(
     }
 }
 
+@Stable
 data class ZDBackgroundStyle(
     val backgroundColor:Color = Color.Transparent,
     val drawBgLines: Boolean = false,
@@ -172,37 +179,6 @@ internal enum class ZDProgress(
     PROGRESS
 }
 
-enum class ZDCircularChartType {
-    PIE_CHART,
-    RADIAL_PROGRESS
-}
-
-data class ZDNeedlePointerStyle(
-    val needlePointLength : Dp,
-    val needlePointWidth: Dp,
-    val needleBaseRadius: Dp
-)
-
-data class ZDLeadingIndicator(
-    val pointerColor: Color,
-    val pointerRadius: Dp,
-)
-
-data class ZDRadialProgressStyle(
-    val pointerStyle: ZDNeedlePointerStyle? = null,
-    val leadingIndicator: ZDLeadingIndicator? = null,
-    @IntRange(from = 0L, to = 100L)
-    val progress: Int = 100
-)
-
-data class ZDMeterText(
-    val startValue: Int = 0,
-    val endValue: Int = 0,
-    val count: Int = 0,
-    val textStyle: TextStyle,
-    val meterSpacing:Dp
-)
-
 data class ZDLineChartStyle(
     val dataPointStyle: ZDDataPointStyle? = null,
     val gradientStyle: ZDGradientStyle? = null,
@@ -210,17 +186,12 @@ data class ZDLineChartStyle(
     val lineStyle: ZDLineStyle = ZDLineStyle.CURVED
 )
 
+@Stable
 enum class ZDXLabelOrientation(val angle:Float) {
     STRAIGHT(0f),
     LEFT_SLANTED(-45F),
     RIGHT_SLANTED(45F)
 }
-
-data class ZDBarSize(
-    val barWidth: Dp = 8.dp,
-    val stackSpacing: Dp = 0.dp,
-    val groupSpacing:Dp = 0.dp,
-)
 
 data class ZDLabelTextStyles(
     val showBottomLabel: Boolean = true,
@@ -234,8 +205,9 @@ data class ZDChartPaddingValues(
     val chartPaddingXAxis: Dp = 0.dp,
     val chartPaddingYAxis: Dp = 0.dp,
 )
-data class ZDVerticalBarSize(
-    val barWidth: Dp = 16.dp,
-    val barTopSpacing: Dp = 8.dp,
-    val barBottomSpacing: Dp = 8.dp
+
+data class ZDChartScrollState(
+    val animatable: Animatable<Float, AnimationVector1D>,
+    @IntRange(from = 0L, to = 100L)
+    val scrollToPercent: MutableState<Int>,
 )

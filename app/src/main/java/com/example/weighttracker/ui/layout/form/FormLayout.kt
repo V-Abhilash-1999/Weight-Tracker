@@ -1,6 +1,6 @@
-package com.example.weighttracker.ui.layout
+package com.example.weighttracker.ui.layout.form
 
-import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -29,27 +29,43 @@ internal fun FormLayout(
                 modifier: Modifier,
                 verticalAlignment: Alignment.Vertical,
                 horizontalArrangement: Arrangement.Horizontal,
-                labelItem: @Composable RowScope.() -> Unit,
-                formItem: @Composable RowScope.() -> Unit
+                labelItem: @Composable () -> Unit,
+                formItem: @Composable () -> Unit
             ) {
                 var headerText: String? = null
                 var textStyle: TextStyle = TextStyle.Default
 
+                var formType: FormType? = null
+                var isHandled = true
+
                 var rowModifier: Modifier = Modifier
                 var headerModifier: Modifier = Modifier
+                var formModifier: Modifier = Modifier
                 /**
                  * Running through all modifiers nested in main modifier
                  */
-                modifier.all { mod ->
+                modifier.any { mod ->
                     headerText?.let {
                         headerModifier = headerModifier.then(mod)
+                    } ?: formType?.let {
+                        formModifier = formModifier.then(mod)
                     } ?: run {
                         rowModifier = rowModifier.then(mod)
                     }
-                    if (mod is HeaderModifier) {
-                        headerText = mod.text
-                        textStyle = mod.textStyle
+                    when (mod) {
+                        is HeaderModifier -> {
+                            headerText = mod.text
+                            textStyle = mod.textStyle
+                        }
+                        is FormTypeModifier -> {
+                            formType = mod.formType
+                            isHandled = mod.isHandled
+                        }
+                        else -> {
+
+                        }
                     }
+
                     false
                 }
 
@@ -60,6 +76,34 @@ internal fun FormLayout(
                         style = textStyle
                     )
                 }
+                val formRow = @Composable {
+                    if (formType != null && !isHandled) {
+                        Box(
+                            modifier = Modifier
+                                .clickable {
+                                    //ABHI Implement Date/Time Picker for compose
+                                    when (formType) {
+                                        FormType.DATE -> {
+
+                                        }
+                                        FormType.TIME -> {
+
+                                        }
+                                        FormType.DATE_TIME -> {
+
+                                        }
+                                        else -> {
+
+                                        }
+                                    }
+                                }
+                        ) {
+                            formItem()
+                        }
+                    } else {
+                        formItem()
+                    }
+                }
 
                 Row(
                     modifier = rowModifier,
@@ -67,7 +111,7 @@ internal fun FormLayout(
                     horizontalArrangement = horizontalArrangement
                 ) {
                     labelItem()
-                    formItem()
+                    formRow()
                 }
             }
 
@@ -75,6 +119,11 @@ internal fun FormLayout(
                 text: String?,
                 textStyle: TextStyle
             ): Modifier = HeaderModifier(otherModifier = this, text = text, textStyle = textStyle)
+
+            override fun Modifier.formType(
+                formType: FormType,
+                isHandled: Boolean
+            ): Modifier = FormTypeModifier(otherModifier = this, formType = formType, isHandled = isHandled)
 
             override fun Modifier.align(alignment: Alignment.Horizontal): Modifier {
                 this@Column.apply {
@@ -118,11 +167,13 @@ internal interface FormScope: ColumnScope {
         modifier: Modifier,
         verticalAlignment: Alignment.Vertical,
         horizontalArrangement: Arrangement.Horizontal,
-        labelItem: @Composable RowScope.() -> Unit,
-        formItem: @Composable RowScope.() -> Unit
+        labelItem: @Composable () -> Unit,
+        formItem: @Composable () -> Unit
     )
 
     fun Modifier.header(text: String?, textStyle: TextStyle): Modifier
+
+    fun Modifier.formType(formType: FormType, isHandled: Boolean): Modifier
 }
 
 @Stable
@@ -140,4 +191,28 @@ class HeaderModifier(
     }
 
     override fun toString() = "HeaderModifierData(text = $text)"
+}
+@Stable
+class FormTypeModifier(
+    private val otherModifier: Modifier,
+    val formType: FormType,
+    val isHandled: Boolean
+):  Modifier.Element {
+    override fun <R> foldIn(initial: R, operation: (R, Modifier.Element) -> R): R {
+        return otherModifier.foldIn(otherModifier.foldIn(initial, operation), operation)
+    }
+
+    override fun <R> foldOut(initial: R, operation: (Modifier.Element, R) -> R): R {
+        return otherModifier.foldOut(otherModifier.foldOut(initial, operation), operation)
+    }
+
+    override fun toString() = "FormTypeModifier(formType = $formType, isHandled = $isHandled)"
+}
+
+enum class FormType {
+    DATE,
+    TIME,
+    DATE_TIME,
+    STRING,
+    NUMBER
 }

@@ -6,7 +6,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.toLowerCase
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
 import com.abhilash.weighttracker.chart.chart.data.ZDDataValue
@@ -17,7 +20,8 @@ import java.util.*
 const val UNSPECIFIED = "UNSPECIFIED"
 const val ERROR_STATE = -1
 const val YEAR = 2022
-val DatapointSize = Size(15f, 15f)
+val DatapointSize: Size
+    @Composable get() = Size(4.dp.dpToPx(), 4.dp.dpToPx())
 
 fun Color.getGradients() : List<Color> = (1..5).map { copy(alpha = it/100f) }
 
@@ -87,3 +91,6 @@ private fun String.toMonth(): Int {
         else -> ERROR_STATE
     }
 }
+
+@Composable
+internal fun Dp.dpToPx() = with(LocalDensity.current) { toPx() }

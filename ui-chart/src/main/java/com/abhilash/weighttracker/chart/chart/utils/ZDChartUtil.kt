@@ -1,20 +1,14 @@
 package com.abhilash.weighttracker.chart.chart.utils
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.abhilash.weighttracker.chart.chart.data.*
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import kotlin.math.atan2
-import kotlin.math.sqrt
+import com.abhilash.weighttracker.chart.chart.data.ZDVerticalShiftProperty
 
-internal const val DEG_TO_RAD_CONST = 57.2958f
 internal val STAR_SIZE = 16.dp
 
 internal fun List<ZDBandwidthData>.getMaxLabelList() : List<String> {
@@ -135,16 +129,16 @@ internal fun List<ZDBandwidthData>.getWidth(spacing: Dp, removeBarWidth: Dp = Dp
             is ZDLineChartData -> {
                 val maxSize = maxOf {
                     if(it is ZDLineChartData) {
-                        it.dataValues.size
+                        it.dataValues.size + 1
                     } else {
                         0
                     }
                 }
-                ((maxSize * spacing.value) - removeBarWidth.value).dp
+                ((maxSize * spacing.value)).dp - spacing/2
             }
 
             is ZDBarData -> {
-                ((size - 1) * spacing.value).dp
+                (size * spacing.value).dp + (spacing / 2)
             }
 
             is ZDCircularChartData -> {
@@ -157,20 +151,6 @@ internal fun List<ZDBandwidthData>.getWidth(spacing: Dp, removeBarWidth: Dp = Dp
         }
     }
 }
-
-internal fun Float.toPositiveDegrees(): Float {
-    return if (this < 0f) {
-        360f + this
-    } else {
-        this
-    }
-}
-
-internal val MutableState<Offset>.x
-    get() = value.x
-
-internal val MutableState<Offset>.y
-    get() = value.y
 
 internal fun lineChartAnimationCallBack(
     animationMap: MutableMap<ZDLineChartData, Boolean?>,
@@ -262,17 +242,6 @@ internal fun ZDDataValue.getValue(verticalShiftProperty: ZDVerticalShiftProperty
     return ((value - verticalShiftProperty.minShiftValue) / minMaxRange) * verticalShiftProperty.maxShiftValue
 }
 
-internal fun ZDDataValue.getDatapointOffset(
-    index: Int,
-    spacing: Float,
-    startOffset: Float,
-    canvasHeight: Float,
-    heightSpacing: Float,
-    verticalShiftProperty: ZDVerticalShiftProperty)
-: Offset {
-    val currData = getValue(verticalShiftProperty)
-    return Offset(
-        x = (index * spacing) + startOffset,
-        y = canvasHeight - currData * heightSpacing
-    )
-}
+@Composable
+internal fun Float.pxToDp() = with(LocalDensity.current) { (this@pxToDp / this.density).dp }
+

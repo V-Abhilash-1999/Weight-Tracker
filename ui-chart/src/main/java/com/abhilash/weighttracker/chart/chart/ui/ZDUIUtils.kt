@@ -1,13 +1,9 @@
 package com.abhilash.weighttracker.chart.chart.ui
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -25,7 +21,6 @@ import com.abhilash.weighttracker.chart.chart.data.ZDLineChartData
 import com.abhilash.weighttracker.chart.chart.data.ZDXLabelOrientation
 import com.abhilash.weighttracker.chart.chart.utils.Holder
 import com.abhilash.weighttracker.chart.chart.utils.lineChartAnimationCallBack
-
 
 @Composable
 internal fun getLineAnimatedMap(
@@ -118,6 +113,7 @@ internal fun XLabelsList(
     }
 }
 
+
 internal fun DrawScope.drawStar(
     posX: Float,
     posY: Float,
@@ -141,4 +137,21 @@ internal fun DrawScope.drawStar(
     drawPath(path = starPath, color = Color.Red, style = Stroke(2f))
     drawPath(path = starPath, color = backgroundColor, style = Fill)
     starPath.close()
+}
+
+internal fun <T> List<T>.forEachDataInRange(
+    lazyIndexPaddingStart: Int = 1,
+    spacing: Float,
+    horizontalOffset: Float,
+    canvasWidth: Float,
+    action: (index: Int, previousIndex: Int, dataValue: T, isFirstIndex: Boolean) -> Unit
+) {
+    val startIndex = ((-horizontalOffset.toInt() / spacing.toInt()) - lazyIndexPaddingStart).coerceIn(0, lastIndex)
+    val finalIndex = (((-horizontalOffset + canvasWidth).toInt() / spacing.toInt()) + 1).coerceIn(0, lastIndex)
+
+    for (index in startIndex..finalIndex) {
+        val isFirstIndex = index == startIndex
+        val previousIndex = index - startIndex - 1
+        action(index,previousIndex, get(index), isFirstIndex)
+    }
 }
