@@ -126,7 +126,6 @@ fun WTSignInScreen(
                                         .size(64.dp),
                                     onClick = {
                                         onSignIn(signInOption)
-//                                        performAction(navController, signInOption)
                                     },
                                     border = BorderStroke(1.dp, Color.Black),
                                     shape = RoundedCornerShape(8.dp),
@@ -151,33 +150,13 @@ fun WTSignInScreen(
     }
 }
 
-fun performAction(
-    navController: DestinationsNavigator,
-    signInOption: WTSignInOption
-) {
-    when(signInOption) {
-        WTSignInOption.ANONYMOUS -> {
-
-        }
-        WTSignInOption.GOOGLE -> {
-
-        }
-        WTSignInOption.FACEBOOK -> {
-
-        }
-        WTSignInOption.MOBILE -> {
-//            navController.navigate(WTMobileSignInDestination)
-        }
-    }
-}
-
 @Destination(
     style = CustomDialog::class,
 )
 @Composable
 fun WTMobileSignIn(
     navController: DestinationsNavigator,
-    getPhoneNumber: () ->String,
+    getPhoneNumber: () -> String,
     viewModel: WTViewModel,
     setPhoneNumber: (String) -> Unit
 ) {
@@ -327,12 +306,14 @@ fun getCountryFlag(countryCode: String) {
 )
 @Composable
 fun WTMobileVerificationCodeScreen(
-    resultNavigator: ResultBackNavigator<String>,
+    navigator: DestinationsNavigator,
     viewModel: WTViewModel
 ) {
     val (verificationCode, setCode) = remember { viewModel.smsCode }
-    if(verificationCode.length >= 6) {
-        resultNavigator.navigateBack(verificationCode)
+    val authVerificationCode = viewModel.verificationCode.value
+    if(verificationCode.length >= 6 && verificationCode == authVerificationCode) {
+        viewModel.setSignedInMethod(WTSignInOption.MOBILE)
+        navigator.navigateUp()
     }
     Column(
         modifier = Modifier
@@ -386,7 +367,10 @@ fun WTMobileVerificationCodeScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 defaultKeyboardAction(ImeAction.Done)
-                                resultNavigator.navigateBack(verificationCode)
+                                if(verificationCode == authVerificationCode) {
+                                    viewModel.setSignedInMethod(WTSignInOption.MOBILE)
+                                }
+                                navigator.navigateUp()
                             }
                         ),
                         keyboardOptions = KeyboardOptions(
@@ -403,7 +387,10 @@ fun WTMobileVerificationCodeScreen(
         Button(
             modifier = Modifier.padding(32.dp),
             onClick = {
-                resultNavigator.navigateBack(verificationCode)
+                if(verificationCode == authVerificationCode) {
+                    viewModel.setSignedInMethod(WTSignInOption.MOBILE)
+                }
+                navigator.navigateUp()
             }
         ) {
             Text(text =  "Enter Verification Code")

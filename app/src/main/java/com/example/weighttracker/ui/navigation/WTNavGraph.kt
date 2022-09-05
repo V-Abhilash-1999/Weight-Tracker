@@ -20,9 +20,9 @@ object WTNavGraph {
         startRoute = WTSignInScreenDestination,
         destinations = listOf(
             WTSignInScreenDestination,
+            WTResultScreenDestination,
             WTMobileSignInDestination,
-            WTMobileVerificationCodeScreenDestination,
-            ResultScreenDestination
+            WTMobileVerificationCodeScreenDestination
         )
     )
 

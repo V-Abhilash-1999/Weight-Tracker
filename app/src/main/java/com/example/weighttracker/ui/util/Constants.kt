@@ -1,5 +1,8 @@
 package com.example.weighttracker.ui.util
 
+import android.os.Parcel
+import android.os.Parcelable
+import androidx.versionedparcelable.VersionedParcelize
 import com.example.weighttracker.R
 
 object WTConstant {

@@ -3,6 +3,7 @@ package com.example.weighttracker
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
@@ -10,16 +11,19 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.example.weighttracker.destinations.*
 import com.example.weighttracker.ui.navigation.WTNavGraph
+import com.example.weighttracker.ui.screens.CustomDialog
 import com.example.weighttracker.ui.screens.WTScreen
 import com.example.weighttracker.ui.theme.WeightTrackerTheme
+import com.example.weighttracker.ui.util.MakeToast
 import com.example.weighttracker.ui.util.WTSignInOption
 import com.example.weighttracker.ui.util.makeToast
 import com.example.weighttracker.viewmodel.WTViewModel
@@ -37,6 +41,7 @@ import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.animations.rememberAnimatedNavHostEngine
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.manualcomposablecalls.composable
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.navigation.dependency
 import com.ramcosta.composedestinations.result.NavResult
 import com.ramcosta.composedestinations.result.ResultRecipient
@@ -49,9 +54,6 @@ import com.ramcosta.composedestinations.scope.*
 typealias callback = ((result: ActivityCallback) -> ActivityResultLauncher<IntentSenderRequest>)
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
-    companion object {
-        const val SMS_SERVICE = "SMS_SERVICE"
-    }
     @Inject
     lateinit var viewModel: WTViewModel
     @Inject
@@ -62,7 +64,7 @@ class MainActivity : FragmentActivity() {
         registerForActivityResult(
             FirebaseAuthUIActivityResultContract()
         ) { res ->
-            viewModel.onSignInResult(res)
+            Log.e(">>>>","res: $res")
         }
 
         var callback: ActivityCallback? = null
@@ -72,6 +74,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             WeightTrackerTheme {
+                viewModel.checkSignIn()
                 RenderScreen(viewModel, auth) { callbackResult ->
                     callback = callbackResult
                     launcher
@@ -98,14 +101,15 @@ fun Activity.RenderScreen(
     val navHostEngine = rememberAnimatedNavHostEngine()
     val bottomSheetNavigator = rememberBottomSheetNavigator()
     val navController = navHostEngine.rememberNavController(bottomSheetNavigator)
-    viewModel.checkSignIn()
-    val isSignedIn = remember { viewModel.isSignedIn }
-//    DestinationsNavHost(navGraph = )
-    val startRoute = if(isSignedIn.value) WTLoggedInScreenDestination else WTLoggedOutScreenDestination
+
+    val isSignedIn = viewModel.isSignedIn
+    val mainNavController = rememberNavController()
+
     DestinationsNavHost(
         navGraph = WTNavGraph.initialScreens,
-        startRoute = startRoute,
-        dependenciesContainerBuilder =  {
+        startRoute = WTLoggedOutScreenDestination,
+        navController = mainNavController,
+        dependenciesContainerBuilder = {
             dependency(viewModel)
             dependency(navController)
             dependency(navHostEngine)
@@ -115,6 +119,10 @@ fun Activity.RenderScreen(
             dependency(this@RenderScreen)
         }
     )
+
+    if(isSignedIn.value) {
+        mainNavController.navigate(WTLoggedInScreenDestination.route)
+    }
 }
 
 @OptIn(ExperimentalMaterialNavigationApi::class)
@@ -149,7 +157,7 @@ fun WTLoggedOutScreen(
 ) {
     var mobileNumber = ""
     val navController = navHostEngine.rememberNavController()
-    val callback = activity.getPhoneAuthCallback(navController, viewModel)
+    val callback = activity.getPhoneAuthCallback(navController, viewModel, auth)
     val activityResultCallback = object : ActivityCallback {
         override fun onResult(result: ActivityResult) {
             mobileNumber = result.getPhoneNumber()
@@ -175,8 +183,10 @@ fun WTLoggedOutScreen(
             activity.baseContext.makeToast("Phone No Exception thrown")
         }
     }
+
     val setSignInOption: (WTSignInOption) -> Unit = { signInOption: WTSignInOption ->
         currentSignInOption = signInOption
+        viewModel.signInMode = signInOption
         activity.signInUsing(signInOption, launcher)
     }
 
@@ -188,6 +198,9 @@ fun WTLoggedOutScreen(
             dependency(viewModel)
             dependency {
                 mobileNumber
+            }
+            currentSignInOption?.let {
+                dependency(it)
             }
             when(currentSignInOption) {
                 null -> {
@@ -210,23 +223,31 @@ fun WTLoggedOutScreen(
     )
 }
 
-@Destination
+@Destination(
+    style = CustomDialog::class
+)
 @Composable
-fun ResultScreen(
+fun WTResultScreen(
     viewModel: WTViewModel,
-    resultRecipient: ResultRecipient<WTMobileVerificationCodeScreenDestination, String>
+    navigator: DestinationsNavigator,
+    getResult: () -> Boolean
 ) {
-    val context = LocalContext.current
-    context.makeToast("Result Screen")
-    resultRecipient.onNavResult { result ->
-        when(result) {
-            is NavResult.Canceled -> {
-                context.makeToast("Incorrect Code")
+    if(getResult()) {
+        when(viewModel.signInMode) {
+            WTSignInOption.ANONYMOUS -> {
+
             }
-            is NavResult.Value -> {
-                if(result.value == viewModel.smsCode.value) {
-                    viewModel.isSignedIn.value = true
-                }
+            WTSignInOption.GOOGLE -> {
+
+            }
+            WTSignInOption.FACEBOOK -> {
+
+            }
+            WTSignInOption.MOBILE -> {
+                navigator.navigate(WTMobileSignInDestination)
+            }
+            null -> {
+
             }
         }
     }
@@ -244,9 +265,11 @@ fun ActivityResult.getPhoneNumber(): String {
 }
 
 fun String.removeCountryCode(): String = if(this.startsWith("+")) {
-        removePrefix("+91")
-    } else {
-      ""
+    removePrefix("+91").apply {
+        removePrefix("+1")
+    }
+} else {
+    ""
     }
 
 private fun Activity.signInUsing(
@@ -302,9 +325,15 @@ private fun Context.requestHint(launcher: ActivityResultLauncher<IntentSenderReq
     launcher.launch(intentSenderRequest.build())
 }
 
-fun Activity.getPhoneAuthCallback(navController: NavController, viewModel: WTViewModel) = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+fun Activity.getPhoneAuthCallback(
+    navController: NavController,
+    viewModel: WTViewModel,
+    auth: FirebaseAuth
+) =
+    object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
     override fun onVerificationCompleted(credential: PhoneAuthCredential) {
         credential.smsCode?.let {
+            viewModel.verificationCode.value = it
             viewModel.smsCode.value = it
         }
     }
@@ -317,6 +346,7 @@ fun Activity.getPhoneAuthCallback(navController: NavController, viewModel: WTVie
         verificationId: String,
         token: PhoneAuthProvider.ForceResendingToken
     ) {
+        viewModel.verificationId = verificationId
         navController.navigate(WTMobileVerificationCodeScreenDestination.route)
         makeToast("Code has been sent")
     }

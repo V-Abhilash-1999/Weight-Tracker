@@ -1,39 +1,39 @@
 {
-  "project_info": {
-    "project_number": "481224565114",
-    "project_id": "weight-tracker-bd252",
-    "storage_bucket": "weight-tracker-bd252.appspot.com"
-  },
-  "client": [
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:481224565114:android:951c570bcec40f443d76c3",
-        "android_client_info": {
-          "package_name": "com.abhilash.apps.weighttracker"
-        }
-      },
-      "oauth_client": [
+    "project_info": {
+        "project_number": "481224565114",
+        "project_id": "weight-tracker-bd252",
+        "storage_bucket": "weight-tracker-bd252.appspot.com"
+    },
+    "client": [
         {
-          "client_id": "481224565114-nlmfj4vkhgonfp9nl1lj5jgdkr5hd5lt.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBZndYk8cf7GZ3z15m3WF4l9shiqLFa2AY"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "481224565114-nlmfj4vkhgonfp9nl1lj5jgdkr5hd5lt.apps.googleusercontent.com",
-              "client_type": 3
+            "client_info": {
+                "mobilesdk_app_id": "1:481224565114:android:951c570bcec40f443d76c3",
+                "android_client_info": {
+                    "package_name": "com.abhilash.apps.weighttracker"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "481224565114-nlmfj4vkhgonfp9nl1lj5jgdkr5hd5lt.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyBZndYk8cf7GZ3z15m3WF4l9shiqLFa2AY"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "481224565114-nlmfj4vkhgonfp9nl1lj5jgdkr5hd5lt.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
             }
-          ]
         }
-      }
-    }
-  ],
-  "configuration_version": "1"
+    ],
+    "configuration_version": "1"
 }
