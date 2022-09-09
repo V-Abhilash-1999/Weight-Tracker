@@ -1,28 +1,31 @@
 package com.example.weighttracker.viewmodel
 
 import android.content.SharedPreferences
-import android.util.Log
+import android.graphics.drawable.Icon
+import android.net.Uri
 import androidx.annotation.IntRange
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
+import androidx.core.graphics.drawable.toIcon
+import androidx.core.net.toFile
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import com.example.weighttracker.repository.WTRoomRepository
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
+import com.example.weighttracker.ui.util.WTConfiguration
 import com.example.weighttracker.ui.util.WTConstant
 import com.example.weighttracker.ui.util.WTSignInOption
-import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.*
+import kotlinx.coroutines.tasks.await
 import java.util.*
 import javax.inject.Inject
-
 class WTViewModel @Inject constructor(
     private val repository: WTRoomRepository,
     private val firebaseDB: FirebaseDatabase,
@@ -37,6 +40,11 @@ class WTViewModel @Inject constructor(
     var verificationCode = mutableStateOf("")
     var verificationId = ""
 
+    var user: FirebaseUser? = null
+        private set
+
+    val storageRef = FirebaseStorage.getInstance()
+
     /***
      * day indicates the day of the month
      * month indicates the month in date,
@@ -50,7 +58,7 @@ class WTViewModel @Inject constructor(
         month: Int,
         year: Int = 2022,
         skipped: Boolean = false,
-        weight: Float // Weight Hopefully will be less than 75 in a few weeks, so no int range
+        weight: Float
     ) {
         val calendar = Calendar.getInstance().apply {
             set(year, month - 1, day)
@@ -80,6 +88,7 @@ class WTViewModel @Inject constructor(
             this.signInMode = WTSignInOption.values().find { it.const == signInMode }
         }
         isSignedIn.value = signInMode != ""
+        user = auth.currentUser
     }
 
     fun setSignedInMethod(signInMethod: WTSignInOption) {
@@ -89,6 +98,55 @@ class WTViewModel @Inject constructor(
             signInMode = signInMethod
         }
         val credential = PhoneAuthProvider.getCredential(verificationId, verificationCode.value)
-        auth.signInWithCredential(credential)
+        auth.signInWithCredential(credential).addOnSuccessListener {
+            user = it.user
+        }
     }
+
+    suspend fun getImageFromCloud(): Uri? {
+        user?.let { user ->
+            try {
+                return storageRef
+                    .reference
+                    .child(WTConstant.PROFILE_PIC_PATH + user.uid)
+                    .downloadUrl
+                    .await()
+            } catch (ex: Exception) {
+                WTConfiguration.checkAndLog(ex.message)
+            }
+        }
+        return null
+    }
+
+    fun updateUserName(name: String) {
+        val request = UserProfileChangeRequest.Builder()
+            .setDisplayName(name)
+            .build()
+        user?.updateProfile(request)
+    }
+
+    fun updateEmailId(email: String) {
+        user?.updateEmail(email)
+    }
+
+    fun updatePhoneNumber(number: String) {
+    }
+
+    fun updateUserImage(image: Uri) {
+        val request = UserProfileChangeRequest.Builder()
+            .setPhotoUri(image)
+            .build()
+        user?.updateProfile(request)
+        user?.let { user ->
+            storageRef
+                .reference
+                .child(WTConstant.PROFILE_PIC_PATH + user.uid)
+                .putFile(image)
+        }
+    }
+
+    fun isUserEmailAvailable() = user?.email != null
+
+    fun isUserPhoneNoAvailable() = user?.phoneNumber != null
 }
+

@@ -11,7 +11,8 @@ object WTNavGraph {
             WTDashboardScreenDestination,
             WTWeightInserterDestination,
             WTMapScreenDestination,
-            WTWeightScreenDestination
+            WTWeightScreenDestination,
+            WTProfileScreenDestination
         )
     )
 

@@ -8,6 +8,10 @@ import com.example.weighttracker.R
 object WTConstant {
     const val SHARED_PREF = "SHARED_PREF"
     const val SIGN_IN  = "SIGN_IN"
+    const val IMAGE_TYPE_INTENT = "image/*"
+    const val DEFAULT_PROFILE_PIC = R.drawable.ic_wt_person_filled
+
+    const val PROFILE_PIC_PATH = "userProfilePics/"
 
     val countryCodes = mapOf(
         "AF" to 93,
@@ -217,14 +221,4 @@ object WTConstant {
         "ZM" to 260,
         "ZW" to 263
     )
-}
-
-enum class WTSignInOption(
-    val const: String,
-    val icon: Int
-) {
-    ANONYMOUS("ANONYMOUS", R.drawable.ic_wt_anonymous),
-    GOOGLE("GOOGLE", R.drawable.ic_wt_google),
-    FACEBOOK("META", R.drawable.ic_wt_meta),
-    MOBILE("MOBILE", R.drawable.ic_wt_call),
 }

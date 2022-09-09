@@ -1,8 +1,12 @@
 package com.example.weighttracker.ui.util
 
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -10,6 +14,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil.request.ImageRequest
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
 import com.abhilash.weighttracker.chart.chart.data.ZDDataValue
@@ -94,3 +99,18 @@ private fun String.toMonth(): Int {
 
 @Composable
 internal fun Dp.dpToPx() = with(LocalDensity.current) { toPx() }
+
+fun Modifier.sizeInDp(size: Int) = this.size(size.dp)
+
+fun Context.buildImageFromUri(imageUri: Uri?) = ImageRequest
+    .Builder(this)
+    .error(WTConstant.DEFAULT_PROFILE_PIC)
+    .data(imageUri)
+    .listener(
+        onError = { request, result ->
+            WTConfiguration.checkAndLog("${result.throwable.message}")
+        }
+    ) { request, result ->
+        WTConfiguration.checkAndLog("${result.diskCacheKey}")
+    }
+    .build()

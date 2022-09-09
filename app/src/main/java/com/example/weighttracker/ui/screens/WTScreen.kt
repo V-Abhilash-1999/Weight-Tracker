@@ -1,5 +1,6 @@
 package com.example.weighttracker.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import com.example.weighttracker.ui.navigation.WTNavGraph
 import com.example.weighttracker.ui.theme.Language
 import com.example.weighttracker.ui.theme.LocalLanguage
 import com.example.weighttracker.ui.theme.LocalLanguageStrings
+import com.example.weighttracker.ui.util.sizeInDp
 import com.example.weighttracker.viewmodel.WTViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.ramcosta.composedestinations.DestinationsNavHost
@@ -32,7 +34,8 @@ import com.ramcosta.composedestinations.spec.NavHostEngine
 fun WTScreen(
     navHostEngine: NavHostEngine,
     navController: NavHostController,
-    viewModel: WTViewModel
+    viewModel: WTViewModel,
+    activity: Activity
 ) {
     val currentLanguage = remember { mutableStateOf(Language.ENGLISH) }
     CompositionLocalProvider(
@@ -86,6 +89,7 @@ fun WTScreen(
                 navController = navController,
                 dependenciesContainerBuilder = {
                     dependency(viewModel)
+                    dependency(activity)
                 }
             )
         }
@@ -154,7 +158,7 @@ fun RowScope.BottomNavItem(
             navController.navigateTo(destination.direction)
             setSelected()
         },
-        selectedContentColor = mainColor,
+        selectedContentColor = destination.selectedColor,
         unselectedContentColor = Color.Black,
         icon = {
             val bottomIcon = rememberAsyncImagePainter(
@@ -162,6 +166,7 @@ fun RowScope.BottomNavItem(
             )
 
             Icon(
+                modifier = Modifier.sizeInDp(24),
                 painter = bottomIcon,
                 contentDescription = "ICON"
             )

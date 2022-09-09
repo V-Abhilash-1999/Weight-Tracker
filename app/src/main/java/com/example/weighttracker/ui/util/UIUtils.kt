@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.weighttracker.ui.screens.cardShape
 import com.example.weighttracker.ui.screens.colorList
@@ -30,38 +31,6 @@ fun MakeToast(
         message = message,
         length = length
     )
-}
-
-@Composable
-fun WTBackgroundScreen(
-    modifier: Modifier = Modifier,
-    scrollable: Boolean = true,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = modifier
-            .screenBackground(
-                scrollState = rememberScrollState(),
-                scrollEnabled = scrollable
-            )
-    ) {
-        content()
-    }
-}
-@Composable
-fun WTCard(
-    modifier: Modifier,
-    padding: PaddingValues = PaddingValues(0.dp),
-    content: @Composable BoxScope.() -> Unit
-) {
-    Box(
-        modifier = modifier
-            .cardShadow()
-            .background(Color.White)
-            .padding(padding)
-    ) {
-        content()
-    }
 }
 
 fun Modifier.wavyBackground(
@@ -89,10 +58,12 @@ fun Modifier.wavyBackground(
     }
 }
 
-fun Modifier.cardShadow(): Modifier {
+fun Modifier.cardShadow(
+    elevation: Dp = 8.dp
+): Modifier {
     return this
         .shadow(
-            elevation = 8.dp,
+            elevation = elevation,
             shape = cardShape,
             clip = true,
             ambientColor = mainColor,

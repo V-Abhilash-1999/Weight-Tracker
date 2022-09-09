@@ -72,6 +72,7 @@ dependencies {
     //View Model
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.6.0-alpha01"
 
+
     //Navigation Version
     def navigation_version = "2.5.1"
     implementation "androidx.navigation:navigation-compose:$navigation_version"
@@ -102,7 +103,7 @@ dependencies {
     //Firebase
     implementation platform('com.google.firebase:firebase-bom:29.3.1')
     implementation 'com.google.firebase:firebase-analytics-ktx'
-    implementation 'com.google.firebase:firebase-database:20.0.5'
+    implementation 'com.google.firebase:firebase-database:20.0.6'
 
     //Firebase Authentication
     implementation 'com.firebaseui:firebase-ui-auth:7.2.0'
@@ -110,14 +111,20 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:30.3.1')
     implementation 'com.google.firebase:firebase-auth-ktx'
 
+    //Firebase Storage
+    implementation 'com.google.firebase:firebase-storage-ktx:20.0.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.4.1'
+
     //SMS Verification
-    implementation 'com.google.android.gms:play-services-auth:20.2.0'
+    implementation 'com.google.android.gms:play-services-auth:20.3.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
 
     //Status Bar Color
     def accompanist_version = "0.17.0"
     implementation "com.google.accompanist:accompanist-systemuicontroller:$accompanist_version"
-    implementation "com.google.accompanist:accompanist-flowlayout:$accompanist_version"
+
+    //Permission
+    implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
 
     //Gif
     implementation("io.coil-kt:coil:2.0.0-rc02")

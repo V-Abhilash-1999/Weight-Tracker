@@ -43,6 +43,8 @@ import androidx.core.app.ActivityCompat
 import coil.compose.rememberAsyncImagePainter
 import com.example.weighttracker.R
 import com.example.weighttracker.ui.layout.form.FormLayout
+import com.example.weighttracker.ui.layout.wtlayout.WTBackgroundScreen
+import com.example.weighttracker.ui.layout.wtlayout.WTCard
 import com.example.weighttracker.ui.util.*
 import com.example.weighttracker.viewmodel.WTViewModel
 import com.google.android.gms.auth.api.credentials.Credentials
@@ -70,7 +72,7 @@ fun WTSignInScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                padding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(16.dp)
             ) {
                 Column {
                     Text(

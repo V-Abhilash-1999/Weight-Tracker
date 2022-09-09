@@ -120,8 +120,12 @@ fun Activity.RenderScreen(
         }
     )
 
-    if(isSignedIn.value) {
-        mainNavController.navigate(WTLoggedInScreenDestination.route)
+    if(isSignedIn.value && mainNavController.currentDestination?.route != WTLoggedInScreenDestination.route) {
+        mainNavController.navigate(WTLoggedInScreenDestination.route) {
+            popUpTo(WTLoggedOutScreenDestination.route) {
+                inclusive = true
+            }
+        }
     }
 }
 
@@ -131,7 +135,8 @@ fun Activity.RenderScreen(
 fun WTLoggedInScreen(
     bottomSheetNavigator: BottomSheetNavigator,
     navHostEngine: NavHostEngine,
-    viewModel: WTViewModel
+    viewModel: WTViewModel,
+    activity: Activity
 ) {
     ModalBottomSheetLayout(
         bottomSheetNavigator = bottomSheetNavigator,
@@ -140,7 +145,8 @@ fun WTLoggedInScreen(
         WTScreen(
             navHostEngine = navHostEngine,
             navController = navHostEngine.rememberNavController(bottomSheetNavigator),
-            viewModel = viewModel
+            viewModel = viewModel,
+            activity = activity
         )
     }
 }
