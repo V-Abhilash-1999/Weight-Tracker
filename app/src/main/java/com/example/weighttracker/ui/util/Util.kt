@@ -4,8 +4,11 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -102,15 +105,6 @@ internal fun Dp.dpToPx() = with(LocalDensity.current) { toPx() }
 
 fun Modifier.sizeInDp(size: Int) = this.size(size.dp)
 
-fun Context.buildImageFromUri(imageUri: Uri?) = ImageRequest
-    .Builder(this)
-    .error(WTConstant.DEFAULT_PROFILE_PIC)
-    .data(imageUri)
-    .listener(
-        onError = { request, result ->
-            WTConfiguration.checkAndLog("${result.throwable.message}")
-        }
-    ) { request, result ->
-        WTConfiguration.checkAndLog("${result.diskCacheKey}")
-    }
-    .build()
+fun MutableState<Boolean>.flipValue() {
+    value = !value
+}

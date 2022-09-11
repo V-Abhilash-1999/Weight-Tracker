@@ -2,6 +2,8 @@ package com.example.weighttracker.ui.util
 
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.unit.dp
 import androidx.versionedparcelable.VersionedParcelize
 import com.example.weighttracker.R
 
@@ -12,6 +14,7 @@ object WTConstant {
     const val DEFAULT_PROFILE_PIC = R.drawable.ic_wt_person_filled
 
     const val PROFILE_PIC_PATH = "userProfilePics/"
+    const val NOTES_PATH = "userNotes/"
 
     val countryCodes = mapOf(
         "AF" to 93,
@@ -221,4 +224,6 @@ object WTConstant {
         "ZM" to 260,
         "ZW" to 263
     )
+
+    val profilePaddingValues = PaddingValues(16.dp)
 }

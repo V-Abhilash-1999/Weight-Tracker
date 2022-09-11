@@ -13,14 +13,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
-import com.example.weighttracker.ui.screens.checkAndOpenImagePicker
 import com.example.weighttracker.ui.screens.mainColor
-import com.example.weighttracker.ui.util.WTConstant
 import com.example.weighttracker.ui.util.cardShadow
 import com.example.weighttracker.ui.util.screenBackground
 import com.example.weighttracker.ui.util.sizeInDp
@@ -61,13 +56,14 @@ fun WTCard(
 @Composable
 fun WTCircularProgressBar(
     showLoader: Boolean,
+    modifier: Modifier = Modifier,
     color: Color = mainColor,
     size: Int = 16,
     strokeWidth: Dp = 2.dp
 ) {
     if(showLoader) {
         CircularProgressIndicator(
-            modifier = Modifier
+            modifier = modifier
                 .sizeInDp(size),
             color = color,
             strokeWidth = strokeWidth

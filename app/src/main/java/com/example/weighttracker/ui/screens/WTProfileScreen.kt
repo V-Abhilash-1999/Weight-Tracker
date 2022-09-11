@@ -2,10 +2,12 @@
 package com.example.weighttracker.ui.screens
 
 import android.app.Activity
-import android.content.Context
-import android.net.Uri
-import android.provider.MediaStore
-import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -15,33 +17,50 @@ import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
+import com.example.weighttracker.destinations.WTMobileVerificationCodeScreenDestination
+import com.example.weighttracker.getPhoneAuthCallback
 import com.example.weighttracker.ui.layout.wtlayout.*
+import com.example.weighttracker.ui.screens.util.*
 import com.example.weighttracker.ui.util.*
 import com.example.weighttracker.viewmodel.WTViewModel
+import com.google.accompanist.flowlayout.FlowMainAxisAlignment
+import com.google.accompanist.flowlayout.FlowRow
+import com.google.accompanist.flowlayout.SizeMode
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionState
 import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 @Destination
 @Composable
 fun WTProfileScreen(
+    navController: DestinationsNavigator,
     viewModel: WTViewModel,
     activity: Activity
 ) {
     val focusManager = LocalFocusManager.current
+    LaunchedEffect(key1 = Unit) {
+        showCard(viewModel)
+    }
     WTBackgroundScreen(
         modifier = Modifier.pointerInput(Unit) {
             detectTapGestures {
@@ -50,7 +69,16 @@ fun WTProfileScreen(
         }
     ) {
         AboutYouCard(activity, viewModel)
-        EmailCard(viewModel)
+
+        UserInfoSection(activity, navController, viewModel)
+    }
+}
+
+suspend fun showCard(viewModel: WTViewModel) {
+    WTUserInfo.PHONE.state.value = viewModel.isUserEmailAvailable
+    WTUserInfo.EMAIL.state.value = viewModel.isUserEmailAvailable
+    viewModel.getUserNotes {
+        WTUserInfo.NOTES.state.value = it.isNotEmpty()
     }
 }
 
@@ -72,10 +100,8 @@ fun AboutYouCard(activity: Activity, viewModel: WTViewModel) {
     }
 
     WTCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 32.dp),
-        contentPadding = PaddingValues(16.dp)
+        modifier = Modifier.profileModifier(),
+        contentPadding = WTConstant.profilePaddingValues
     ) {
         Row {
             CircularImageWithLoader(
@@ -91,166 +117,279 @@ fun AboutYouCard(activity: Activity, viewModel: WTViewModel) {
                 showLoader = showLoader.value
             )
 
-            NameTextField(viewModel)
+            ProfileTextField(
+                text = viewModel.user?.displayName ?: "",
+                placeHolderText = "Provide Name Here",
+                keyboardType = KeyboardType.Text
+            ) { name ->
+                viewModel.updateUserName(name)
+            }
         }
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun NameTextField(viewModel: WTViewModel) {
-    val (name, setName) = remember { mutableStateOf(viewModel.user?.displayName ?: "") }
-    TextField(
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged {
-                if (!it.isFocused) {
-                    if (name.isNotEmpty()) {
-                        viewModel.updateUserName(name)
+fun UserInfoSection(
+    activity: Activity,
+    navController: DestinationsNavigator,
+    viewModel: WTViewModel
+) {
+    WTUserInfo.values().forEach { wtUserInfo ->
+        val userState by remember { wtUserInfo.state }
+
+        AnimatedContent(
+            targetState = userState,
+            transitionSpec = {
+                val enterAnim = slideInHorizontally { -it } +  fadeIn(animationSpec = tween(200, delayMillis = 100))
+                val exitAnim = slideOutHorizontally { it } + fadeOut(animationSpec = tween(200, delayMillis = 100))
+
+                (enterAnim with exitAnim)
+                    .using(
+                        SizeTransform(
+                            clip = false,
+                            sizeAnimationSpec = { width, height ->
+                                spring(
+                                    stiffness = Spring.StiffnessMediumLow,
+                                    visibilityThreshold = IntSize.VisibilityThreshold
+                                )
+                            }
+                        )
+                    )
+            }
+        ) {showInfo ->
+            if(showInfo) {
+                when(wtUserInfo) {
+                    WTUserInfo.EMAIL -> {
+                        if(viewModel.signInMode == WTSignInOption.GOOGLE) {
+                            EmailCard(viewModel)
+                        }
+                    }
+                    WTUserInfo.PHONE -> {
+                        if(viewModel.signInMode == WTSignInOption.MOBILE) {
+                            PhoneCard(activity, navController, viewModel)
+                        }
+                    }
+                    WTUserInfo.NOTES -> {
+                        NotesCard(viewModel = viewModel)
                     }
                 }
-            },
-        value = name,
-        onValueChange = setName,
-        isError = name.isEmpty(),
-        placeholder = {
-            Text(text = "Enter Your Name Here")
-        },
-        keyboardActions = KeyboardActions(
-            onDone = {
-                viewModel.updateUserName(name)
             }
-        ),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Done
-        ),
-        singleLine = true,
-        colors = WTProfileInputColors()
-    )
+        }
+    }
+
+    UserInfoAdditionCard(viewModel = viewModel)
 }
 
 
 @Composable
 fun EmailCard(viewModel: WTViewModel) {
-    WTCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                modifier = Modifier.sizeInDp(12),
-                imageVector = Icons.Default.Email,
-                contentDescription = "Email"
-            )
-
-            EmailTextField(viewModel = viewModel)
-        }
+    ProfileCard(
+        icon = Icons.Filled.Email,
+        placeHolderText = "Provide Email Here",
+        keyboardType = KeyboardType.Email,
+        text = viewModel.email,
+    ) { emailId ->
     }
 }
 
 @Composable
-fun EmailTextField(viewModel: WTViewModel) {
-    val (email, setEmail) = remember { mutableStateOf(viewModel.user?.email ?: "") }
-    TextField(
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged {
-                if (!it.isFocused) {
-                    if (email.isNotEmpty()) {
-                        viewModel.updateEmailId(email)
+fun PhoneCard(
+    activity: Activity,
+    navController: DestinationsNavigator,
+    viewModel: WTViewModel
+) {
+    val phoneAuthCallback = LocalContext.current.getPhoneAuthCallback(
+        onCodeSent = {  verificationId->
+            viewModel.verificationId = verificationId
+            navController.navigate(WTMobileVerificationCodeScreenDestination)
+        }
+    ) { credential ->
+        credential.smsCode?.let { smsCode ->
+            viewModel.verificationCode.value = smsCode
+            viewModel.smsCode.value = smsCode
+        }
+        viewModel.user?.updatePhoneNumber(credential)
+    }
+    ProfileCard(
+        icon = Icons.Filled.Phone,
+        placeHolderText = "Provide Phone No Here",
+        text = viewModel.phoneNumber,
+        isEditable = viewModel.signInMode != WTSignInOption.MOBILE,
+        onTextUpdate = { phoneNumber ->
+            viewModel.updatePhoneNumber(phoneNumber, phoneAuthCallback, activity)
+        }
+    )
+}
+@Composable
+fun NotesCard(viewModel: WTViewModel) {
+    var showLoader by remember { mutableStateOf(true) }
+    var notes by remember { mutableStateOf("") }
+    LaunchedEffect(key1 = Unit) {
+        viewModel.getUserNotes { apiNotes ->
+            notes = apiNotes
+            showLoader = true
+        }
+    }
+    ProfileCard(
+        icon = Icons.Filled.DateRange,
+        placeHolderText = "Provide Notes Here",
+        text = notes,
+        isEditable = !showLoader,
+        showLoader = showLoader,
+        onTextUpdate = { updatedNotes ->
+            if(updatedNotes != notes) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    showLoader = true
+                    viewModel.setUserNotes(updatedNotes) {
+                        showLoader = false
                     }
                 }
-            },
-        value = email,
-        onValueChange = setEmail,
-        isError = email.isEmpty(),
-        placeholder = {
-            Text(text = "Enter Your Email Here")
-        },
-        keyboardActions = KeyboardActions(
-            onDone = {
-                viewModel.updateUserName(email)
             }
-        ),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Done
-        ),
-        singleLine = true,
-        colors = WTProfileInputColors()
+        }
     )
 }
 
 @Composable
-fun rememberAsyncProfilePic(
-    profilePic: MutableState<Any>,
-    showLoader: MutableState<Boolean>
-) = rememberAsyncImagePainter(
-    model = profilePic.value,
-    onState = { painterState ->
-        painterState.hideLoaderIf(profilePic.isNotDefaultProfilePic()) {
-            showLoader.value = false
+fun ProfileCard(
+    icon: ImageVector,
+    placeHolderText: String = "",
+    keyboardType: KeyboardType = KeyboardType.Text,
+    text: String,
+    showLoader: Boolean = false,
+    isEditable: Boolean = true,
+    onTextUpdate: (String) -> Unit
+) {
+    WTCard(
+        modifier = Modifier
+            .profileModifier(),
+        contentPadding = WTConstant.profilePaddingValues
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(
+                modifier = Modifier
+                    .sizeInDp(32),
+                imageVector = icon,
+                contentDescription = "Profile Icon"
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                ProfileTextField(
+                    text = text,
+                    keyboardType = keyboardType,
+                    isEditable = isEditable,
+                    showLoader = showLoader,
+                    placeHolderText = placeHolderText,
+                    onTextUpdate = onTextUpdate
+                )
+            }
+
         }
     }
-)
-
+}
 
 @Composable
-fun LoadImageFromCloud(
-    profilePic: MutableState<Any>,
-    showLoader: MutableState<Boolean>,
-    viewModel: WTViewModel,
-    context: Context
+fun RowScope.ProfileTextField(
+    text: String,
+    placeHolderText: String,
+    showLoader: Boolean = false,
+    isEditable: Boolean = true,
+    keyboardType: KeyboardType,
+    onTextUpdate: (String) -> Unit
 ) {
-    LaunchedEffect(key1 = Unit) {
-        val imageUri = viewModel.getImageFromCloud()
-        if(imageUri != null) {
-            profilePic.value = context.buildImageFromUri(imageUri)
-        } else {
-            showLoader.value = false
-        }
-    }
+    val (inputText, setText) = remember(text) { mutableStateOf(text) }
+    var hasFocus by remember { mutableStateOf(false) }
+
+    TextField(
+        modifier = Modifier
+            .fillMaxWidth(0.80f)
+            .weight(95f, true)
+            .onFocusChanged {
+                if (!it.isFocused && hasFocus) {
+                    if (inputText.isNotEmpty()) {
+                        onTextUpdate(inputText)
+                    }
+                }
+                if (it.isFocused) {
+                    hasFocus = true
+                }
+            },
+        value = inputText,
+        onValueChange = setText,
+        isError = inputText.isEmpty(),
+        placeholder = {
+            Text(text = placeHolderText)
+        },
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onTextUpdate(inputText)
+            }
+        ),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = ImeAction.Done
+        ),
+        enabled = isEditable,
+        singleLine = true,
+        colors = WTProfileInputColors()
+    )
+
+    WTCircularProgressBar(
+        modifier = Modifier
+            .weight(5f, true),
+        showLoader = showLoader
+    )
 }
 
-fun MutableState<Any>.isDefaultProfilePic() = value == WTConstant.DEFAULT_PROFILE_PIC
-
-fun MutableState<Any>.isNotDefaultProfilePic() = value != WTConstant.DEFAULT_PROFILE_PIC
-
-fun AsyncImagePainter.State.hideLoaderIf(condition: Boolean, block: () -> Unit) {
-    if(painter != null && condition) {
-        block()
-    }
-}
-
-fun Uri.imagePickerResult(
-    profilePic: MutableState<Any>,
-    viewModel: WTViewModel,
-    context: Context
-) {
-    profilePic.value = context.buildImageFromUri(this)
-    viewModel.updateUserImage(this)
-}
-
-fun checkAndOpenImagePicker(
-    permissionState: PermissionState,
-    onPermissionEnabled: () -> Unit
-) {
-    if (permissionState.hasPermission) {
-        onPermissionEnabled()
-    } else {
-        permissionState.launchPermissionRequest()
-    }
-}
-
-fun PermissionState.setOnPermissionRequested(
-    imagePickerLauncher: ManagedActivityResultLauncher<String, Uri?>,
-    activity: Activity
-) {
-    if(permissionRequested) {
-        if(hasPermission) {
-            imagePickerLauncher.launch(WTConstant.IMAGE_TYPE_INTENT)
-        } else {
-            activity.makeToast("Kindly provide permission")
+@Composable
+fun UserInfoAdditionCard(viewModel: WTViewModel) {
+    Crossfade(
+        targetState = !viewModel.isUserEmailAvailable || !viewModel.isUserPhoneNoAvailable
+    ) { showCard ->
+        if(showCard) {
+            WTCard(
+                modifier = Modifier.profileModifier()
+            ) {
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    mainAxisSize = SizeMode.Expand,
+                    mainAxisAlignment = FlowMainAxisAlignment.SpaceEvenly
+                ) {
+                    for(userInfo in WTUserInfo.values()) {
+                        if(
+                            (userInfo != WTUserInfo.EMAIL || viewModel.isUserEmailAvailable) &&
+                            (userInfo != WTUserInfo.PHONE || viewModel.isUserPhoneNoAvailable)
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .sizeInDp(64)
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = colorList
+                                        )
+                                    )
+                                    .padding(16.dp)
+                                    .clickable(
+                                        role = Role.Image
+                                    ) {
+                                        userInfo.state.flipValue()
+                                    },
+                                imageVector = userInfo.icon,
+                                contentDescription = userInfo.desc
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

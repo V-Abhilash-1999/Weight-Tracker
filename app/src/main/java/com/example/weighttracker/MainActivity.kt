@@ -24,6 +24,7 @@ import com.example.weighttracker.ui.screens.CustomDialog
 import com.example.weighttracker.ui.screens.WTScreen
 import com.example.weighttracker.ui.theme.WeightTrackerTheme
 import com.example.weighttracker.ui.util.MakeToast
+import com.example.weighttracker.ui.util.WTConfiguration
 import com.example.weighttracker.ui.util.WTSignInOption
 import com.example.weighttracker.ui.util.makeToast
 import com.example.weighttracker.viewmodel.WTViewModel
@@ -163,7 +164,18 @@ fun WTLoggedOutScreen(
 ) {
     var mobileNumber = ""
     val navController = navHostEngine.rememberNavController()
-    val callback = activity.getPhoneAuthCallback(navController, viewModel, auth)
+    val callback = activity.getPhoneAuthCallback(
+        onVerified = { credential ->
+            credential.smsCode?.let { smsCode ->
+                viewModel.verificationCode.value = smsCode
+                viewModel.smsCode.value = smsCode
+            }
+        },
+        onCodeSent = { verificationId ->
+            viewModel.verificationId = verificationId
+            navController.navigate(WTMobileVerificationCodeScreenDestination.route)
+        }
+    )
     val activityResultCallback = object : ActivityCallback {
         override fun onResult(result: ActivityResult) {
             mobileNumber = result.getPhoneNumber()
@@ -186,7 +198,7 @@ fun WTLoggedOutScreen(
 
             PhoneAuthProvider.verifyPhoneNumber(options)
         } catch(ex:Exception) {
-            activity.baseContext.makeToast("Phone No Exception thrown")
+            activity.baseContext.makeToast("Phone Number Exception thrown")
         }
     }
 
@@ -287,29 +299,7 @@ private fun Activity.signInUsing(
 
         }
         WTSignInOption.GOOGLE -> {
-            /*val hintRequest = HintRequest.Builder()
-                .setHintPickerConfig(
-                    CredentialPickerConfig.Builder()
-                        .setShowCancelButton(true)
-                        .build()
-                )
-                .setEmailAddressIdentifierSupported(true)
-                .setAccountTypes(IdentityProviders.GOOGLE)
-                .build()
 
-            val intent: PendingIntent = mCredentialsClient.getHintPickerIntent(hintRequest)
-            try {
-                ActivityCompat.startIntentSenderForResult(
-                    intent.getIntentSender(),
-                    RC_HINT,
-                    null,
-                    0,
-                    0,
-                    0
-                )
-            } catch (e: IntentSender.SendIntentException) {
-                baseContext.makeToast("Could not start hint picker Intent")
-            }*/
         }
         WTSignInOption.FACEBOOK -> {
 
@@ -331,29 +321,27 @@ private fun Context.requestHint(launcher: ActivityResultLauncher<IntentSenderReq
     launcher.launch(intentSenderRequest.build())
 }
 
-fun Activity.getPhoneAuthCallback(
-    navController: NavController,
-    viewModel: WTViewModel,
-    auth: FirebaseAuth
-) =
-    object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+fun Context.getPhoneAuthCallback(
+    onCodeSent: (verificationID: String) -> Unit,
+    onVerified: (credential: PhoneAuthCredential) -> Unit
+) = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
     override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-        credential.smsCode?.let {
-            viewModel.verificationCode.value = it
-            viewModel.smsCode.value = it
-        }
+        onVerified(credential)
+        WTConfiguration.checkAndLog(message = "Phone Number Verified - ${credential.smsCode}", tag = "PhoneAuth")
     }
 
     override fun onVerificationFailed(e: FirebaseException) {
         makeToast("Unable to verify code")
+        WTConfiguration.checkAndLog("Phone verification Failed - ${e.message}", tag = "PhoneAuth")
     }
 
     override fun onCodeSent(
         verificationId: String,
         token: PhoneAuthProvider.ForceResendingToken
     ) {
-        viewModel.verificationId = verificationId
-        navController.navigate(WTMobileVerificationCodeScreenDestination.route)
+        onCodeSent(verificationId)
         makeToast("Code has been sent")
+        WTConfiguration.checkAndLog("Phone Code Sent - $verificationId", tag = "PhoneAuth")
+
     }
 }

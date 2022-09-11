@@ -12,7 +12,8 @@ object WTNavGraph {
             WTWeightInserterDestination,
             WTMapScreenDestination,
             WTWeightScreenDestination,
-            WTProfileScreenDestination
+            WTProfileScreenDestination,
+            WTMobileVerificationCodeScreenDestination
         )
     )
 

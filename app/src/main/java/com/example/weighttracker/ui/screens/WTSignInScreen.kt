@@ -159,13 +159,12 @@ fun WTSignInScreen(
 fun WTMobileSignIn(
     navController: DestinationsNavigator,
     getPhoneNumber: () -> String,
-    viewModel: WTViewModel,
     setPhoneNumber: (String) -> Unit
 ) {
     val (mobileNoTextState, setMobileNo) = remember { mutableStateOf(getPhoneNumber()) }
     val (expanded, setExpanded) = remember { mutableStateOf(false) }
 
-    val currentCountry = Locale.getDefault().country
+    val currentCountry = Locale("en_IN").country
     val countryCodeMap = WTConstant.countryCodes.toMutableMap()
     var selectedCountry by remember { mutableStateOf(currentCountry) }
     val selectedCountryCode by remember(selectedCountry) {
@@ -262,8 +261,8 @@ fun WTMobileSignIn(
                             onDone = {
                                 defaultKeyboardAction(ImeAction.Done)
 
-                                viewModel.phoneNumber = "$selectedCountryCode$mobileNoTextState"
-                                setPhoneNumber(viewModel.phoneNumber)
+                                val phoneNumber = "$selectedCountryCode$mobileNoTextState"
+                                setPhoneNumber(phoneNumber)
                                 navController.navigateUp()
                             }
                         ),
@@ -281,8 +280,8 @@ fun WTMobileSignIn(
         Button(
             modifier = Modifier.padding(32.dp),
             onClick = {
-                viewModel.phoneNumber = "$selectedCountryCode$mobileNoTextState"
-                setPhoneNumber(viewModel.phoneNumber)
+                val phoneNumber = "$selectedCountryCode$mobileNoTextState"
+                setPhoneNumber(phoneNumber)
                 navController.navigateUp()
             }
         ) {
@@ -389,7 +388,7 @@ fun WTMobileVerificationCodeScreen(
         Button(
             modifier = Modifier.padding(32.dp),
             onClick = {
-                if(verificationCode == authVerificationCode) {
+                if(verificationCode == authVerificationCode || authVerificationCode.isEmpty()) {
                     viewModel.setSignedInMethod(WTSignInOption.MOBILE)
                 }
                 navigator.navigateUp()
