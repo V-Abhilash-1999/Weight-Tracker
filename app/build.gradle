@@ -5,6 +5,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'com.google.gms.google-services'
     id 'com.google.devtools.ksp' version "$kotlin_version-1.0.6"
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 kotlin {

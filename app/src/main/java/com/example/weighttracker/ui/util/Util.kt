@@ -21,6 +21,8 @@ import coil.request.ImageRequest
 import com.example.weighttracker.repository.database.WTDataValue
 import com.example.weighttracker.repository.util.WTDateConverter
 import com.abhilash.weighttracker.chart.chart.data.ZDDataValue
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -108,3 +110,6 @@ fun Modifier.sizeInDp(size: Int) = this.size(size.dp)
 fun MutableState<Boolean>.flipValue() {
     value = !value
 }
+
+@OptIn(ExperimentalPermissionsApi::class)
+fun PermissionState.isPermanentlyDisabled() = !hasPermission && !shouldShowRationale

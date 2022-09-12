@@ -5,8 +5,13 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -14,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.weighttracker.ui.screens.cardShape
@@ -21,6 +27,8 @@ import com.example.weighttracker.ui.screens.colorList
 import com.example.weighttracker.ui.screens.mainColor
 import kotlin.math.sin
 
+
+val screenPaddingValues = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 76.dp)
 
 @Composable
 fun MakeToast(
@@ -85,7 +93,7 @@ fun Modifier.screenBackground(
                     )
             )
             .verticalScroll(state = scrollState)
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 76.dp)
+            .padding(screenPaddingValues)
     } else {
         this
             .fillMaxSize()
@@ -96,5 +104,52 @@ fun Modifier.screenBackground(
                     )
             )
             .padding(8.dp)
+    }
+}
+
+@Composable
+fun WTSnackBar(
+    modifier: Modifier,
+    text: String
+) {
+    val snackBarState = rememberSnackBarHostState()
+    SnackbarHost(
+        modifier = modifier.padding(horizontal = 8.dp),
+        hostState = snackBarState.value,
+    ) {
+        Snackbar(
+            snackbarData = WTSnackBarData(text){
+
+            },
+            backgroundColor = Color.Black,
+            elevation = 32.dp,
+            shape = RoundedCornerShape(16.dp),
+        )
+    }
+    LaunchedEffect(key1 = Unit) {
+        snackBarState.value.showSnackbar(text, null)
+    }
+}
+
+@Composable
+fun rememberSnackBarHostState() = remember {
+    mutableStateOf(SnackbarHostState())
+}
+
+class WTSnackBarData(
+    private val snackBarMessage: String,
+    private val onClick: () -> Unit
+): SnackbarData {
+    override val actionLabel: String? = null
+    override val duration: SnackbarDuration
+        get() = SnackbarDuration.Short
+    override val message: String
+        get() = snackBarMessage
+
+    override fun dismiss() {
+    }
+
+    override fun performAction() {
+        onClick()
     }
 }

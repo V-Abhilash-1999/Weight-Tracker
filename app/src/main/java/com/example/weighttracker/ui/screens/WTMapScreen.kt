@@ -1,11 +1,13 @@
 package com.example.weighttracker.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.weighttracker.ui.layout.wtlayout.WTBackgroundScreen
+import com.example.weighttracker.ui.screens.util.LocationUpdater
 import com.example.weighttracker.viewmodel.WTViewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -40,6 +42,12 @@ fun WTMapScreen(
                     title = "Singapore",
                     snippet = "Marker in Singapore"
                 )
+            }
+
+            LocationUpdater(
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+
             }
         }
     }
