@@ -2,4 +2,4 @@
 
 Simple app in compose made with firebase authentiction, firebase storage
 
-Soon map to be deployed. Stay tuned makkale
+Dropping this, because Google decided to be a little b**** and made direction a paid API
